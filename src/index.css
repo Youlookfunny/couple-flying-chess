@@ -185,6 +185,10 @@ body {
   perspective: 1000px;
 }
 
+.task-card-pop {
+  animation: task-card-pop 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 .flip-card-inner {
   position: relative;
   width: 100%;
@@ -215,4 +219,19 @@ body {
 
 .flip-card-inner.flipped {
   transform: rotateY(180deg);
+}
+
+@keyframes task-card-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

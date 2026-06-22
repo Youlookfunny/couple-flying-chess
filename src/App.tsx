@@ -4,6 +4,7 @@ import { useGameState } from './hooks/useGameState';
 import { TaskEventData } from './types';
 import { HomeView } from './components/views/HomeView';
 import { GameView } from './components/views/GameView';
+import { CardModeView } from './components/views/CardModeView';
 import { ThemesView } from './components/views/ThemesView';
 import { ThemeSelectorModal } from './components/modals/ThemeSelectorModal';
 import { TaskCardModal } from './components/modals/TaskCardModal';
@@ -17,6 +18,7 @@ function App() {
   const {
     state,
     switchView,
+    selectGameMode,
     selectTheme,
     createTheme,
     updateThemeMeta,
@@ -24,6 +26,7 @@ function App() {
     removeThemeTask,
     importThemeTasks,
     startGame,
+    drawCardTask,
     movePlayer,
     endTurn,
     setIsRolling,
@@ -128,7 +131,7 @@ function App() {
 
         <main className="flex-1 min-h-0 relative overflow-hidden">
           <div
-            className={`absolute inset-0 flex flex-col px-6 pt-10 pb-10 transition-all duration-500 ease-in-out ${
+            className={`absolute inset-0 flex flex-col px-6 pt-4 pb-2 transition-all duration-500 ease-in-out ${
               state.view === 'home'
                 ? 'translate-x-0 opacity-100'
                 : 'opacity-0 pointer-events-none -translate-x-full'
@@ -137,6 +140,8 @@ function App() {
             <HomeView
               players={state.players}
               themes={state.themes}
+              gameMode={state.gameMode}
+              onSelectMode={selectGameMode}
               onSelectTheme={handleSelectTheme}
               onStartGame={handleStartGame}
             />
@@ -229,6 +234,17 @@ function App() {
           onEndTurn={endTurn}
           onSetRolling={setIsRolling}
           onWin={handleWin}
+          onTaskTrigger={handleTaskTrigger}
+          onBack={handleBackFromGame}
+        />
+      )}
+
+      {state.view === 'card' && (
+        <CardModeView
+          players={state.players}
+          themes={state.themes}
+          currentTurn={state.turn}
+          onDrawTask={drawCardTask}
           onTaskTrigger={handleTaskTrigger}
           onBack={handleBackFromGame}
         />

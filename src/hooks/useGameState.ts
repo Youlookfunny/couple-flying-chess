@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GameState, Player, TaskEventData, Theme } from '../types';
+import { GameMode, GameState, Player, TaskEventData, Theme } from '../types';
 import { loadFromStorage, saveToStorage } from '../utils/localStorage';
 import { generateSpiralPath, generateBoardMap, calculateNewPosition } from '../utils/gameLogic';
 import { DEFAULT_THEMES } from '../data/defaultThemes';
@@ -89,7 +89,11 @@ function normalizeGameState(saved: unknown): GameState | null {
   });
 
   return {
-    view: s.view === 'home' || s.view === 'game' || s.view === 'themes' ? s.view : 'home',
+    view:
+      s.view === 'home' || s.view === 'game' || s.view === 'card' || s.view === 'themes'
+        ? s.view
+        : 'home',
+    gameMode: s.gameMode === 'card' || s.view === 'card' ? 'card' : 'board',
     turn: s.turn === 0 || s.turn === 1 ? s.turn : 0,
     players,
     themes,
@@ -112,6 +116,41 @@ function createThemeId(existingIds: Set<string>) {
   return id;
 }
 
+function canStartWithThemes(players: Player[], themes: Theme[]) {
+  for (const player of players) {
+    if (!player.themeId) return false;
+    const theme = themes.find(t => t.id === player.themeId);
+    if (!theme) return false;
+    if (!isThemeAllowedForRole(theme, player.role)) return false;
+    if (theme.tasks.length === 0) return false;
+  }
+  return true;
+}
+
+function createRandomTaskEvent(
+  players: Player[],
+  themes: Theme[],
+  playerId: number
+): TaskEventData | null {
+  const player = players.find(p => p.id === playerId);
+  if (!player?.themeId) return null;
+
+  const theme = themes.find(t => t.id === player.themeId);
+  if (!theme || theme.tasks.length === 0) return null;
+
+  return {
+    type: 'card',
+    initiatorPlayerId: player.id,
+    executorPlayerId: player.id,
+    title: '任务卡牌',
+    subtitle: `任务来自「${theme.name}」`,
+    icon: 'sparkles',
+    color: player.role === 'male' ? 'text-[#0A84FF]' : 'text-[#FF375F]',
+    task: theme.tasks[Math.floor(Math.random() * theme.tasks.length)],
+    taskSourceId: theme.id
+  };
+}
+
 export function useGameState() {
   const [state, setState] = useState<GameState>(() => {
     const saved = loadFromStorage<GameState | null>(STORAGE_KEY, null);
@@ -123,6 +162,7 @@ export function useGameState() {
 
     return {
       view: 'home',
+      gameMode: 'board',
       turn: 0,
       players: initialPlayers,
       themes: DEFAULT_THEMES,
@@ -138,6 +178,10 @@ export function useGameState() {
 
   const switchView = useCallback((view: GameState['view']) => {
     setState(prev => ({ ...prev, view }));
+  }, []);
+
+  const selectGameMode = useCallback((mode: GameMode) => {
+    setState(prev => ({ ...prev, gameMode: mode }));
   }, []);
 
   const selectTheme = useCallback((playerId: number, themeId: string) => {
@@ -249,16 +293,23 @@ export function useGameState() {
   }, []);
 
   const startGame = useCallback(() => {
-    for (const player of state.players) {
-      if (!player.themeId) return false;
-      const theme = state.themes.find(t => t.id === player.themeId);
-      if (!theme) return false;
-      if (!isThemeAllowedForRole(theme, player.role)) return false;
-      if (theme.tasks.length === 0) return false;
-    }
-    setState(prev => ({ ...prev, view: 'game', turn: Math.random() < 0.5 ? 0 : 1 }));
+    if (!canStartWithThemes(state.players, state.themes)) return false;
+
+    setState(prev => ({
+      ...prev,
+      view: prev.gameMode === 'card' ? 'card' : 'game',
+      turn: Math.random() < 0.5 ? 0 : 1,
+      players: prev.players.map(p => ({ ...p, step: 0 })),
+      boardMap: generateBoardMap(),
+      pathCoords: generateSpiralPath(),
+      isRolling: false
+    }));
     return true;
   }, [state.players, state.themes]);
+
+  const drawCardTask = useCallback((): TaskEventData | null => {
+    return createRandomTaskEvent(state.players, state.themes, state.turn);
+  }, [state.players, state.themes, state.turn]);
 
   const movePlayer = useCallback((steps: number) => {
     setState(prev => {
@@ -354,7 +405,7 @@ export function useGameState() {
     setState(prev => {
       let nextPlayers = prev.players;
 
-      if (outcome === 'reject') {
+      if (outcome === 'reject' && task.type !== 'card') {
         const backSteps = Math.floor(Math.random() * 3) + 1;
         nextPlayers = prev.players.map(p => {
           if (p.id !== task.executorPlayerId) return p;
@@ -380,6 +431,7 @@ export function useGameState() {
     setState(prev => ({
       ...prev,
       view: 'home',
+      gameMode: 'board',
       turn: 0,
       players: initialPlayers.map(p => ({ ...p, themeId: null, step: 0 })),
       boardMap: generateBoardMap(),
@@ -391,6 +443,7 @@ export function useGameState() {
   return {
     state,
     switchView,
+    selectGameMode,
     selectTheme,
     createTheme,
     updateThemeMeta,
@@ -398,6 +451,7 @@ export function useGameState() {
     removeThemeTask,
     importThemeTasks,
     startGame,
+    drawCardTask,
     movePlayer,
     endTurn,
     setIsRolling,

@@ -147,7 +147,7 @@ export function GameView({
           />
         </div>
 
-        <div className="h-[260px] w-full ios-glass rounded-t-[32px] flex flex-col items-center pt-8 pb-8 px-6 border-t border-white/10 shadow-2xl shrink-0">
+        <div className="mx-4 mb-4 h-[244px] ios-glass rounded-[32px] flex flex-col items-center pt-8 pb-8 px-6 border border-white/10 shadow-2xl shrink-0">
           <div
             className={`text-sm font-medium mb-6 text-center animate-pulse ${
               currentTurn === 0 ? 'text-[#0A84FF]' : 'text-[#FF375F]'

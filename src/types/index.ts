@@ -2,6 +2,8 @@ export type TileType = 'blank' | 'lucky' | 'trap';
 
 export type PlayerRole = 'male' | 'female';
 
+export type GameMode = 'board' | 'card';
+
 export interface Player {
   id: number;
   name: string;
@@ -27,7 +29,8 @@ export interface PathCoord {
 }
 
 export interface GameState {
-  view: 'home' | 'game' | 'themes';
+  view: 'home' | 'game' | 'card' | 'themes';
+  gameMode: GameMode;
   turn: number;
   players: Player[];
   themes: Theme[];
@@ -37,7 +40,7 @@ export interface GameState {
 }
 
 export interface TaskEventData {
-  type: 'collision' | 'lucky' | 'trap';
+  type: 'collision' | 'lucky' | 'trap' | 'card';
   initiatorPlayerId: number;
   executorPlayerId: number;
   title: string;
