@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { GameMode, Player, Theme } from '../../types';
 import { ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
 
@@ -45,6 +46,59 @@ export function HomeView({
   onStartGame
 }: HomeViewProps) {
   const shouldShowThemeSelectors = gameMode !== 'pose';
+  const modeScrollerRef = useRef<HTMLDivElement>(null);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollLeftRef = useRef(0);
+  const hasDraggedModeRef = useRef(false);
+  const [isDraggingMode, setIsDraggingMode] = useState(false);
+
+  const handleModeMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const scroller = modeScrollerRef.current;
+    if (!scroller) return;
+
+    dragStartXRef.current = event.clientX;
+    dragStartScrollLeftRef.current = scroller.scrollLeft;
+    hasDraggedModeRef.current = false;
+    setIsDraggingMode(true);
+  };
+
+  const handleModeMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingMode) return;
+    const scroller = modeScrollerRef.current;
+    if (!scroller) return;
+
+    const deltaX = event.clientX - dragStartXRef.current;
+    if (Math.abs(deltaX) > 4) {
+      hasDraggedModeRef.current = true;
+      event.preventDefault();
+    }
+    scroller.scrollLeft = dragStartScrollLeftRef.current - deltaX;
+  };
+
+  const handleModeMouseUp = () => {
+    if (!isDraggingMode) return;
+    setIsDraggingMode(false);
+  };
+
+  useEffect(() => {
+    const scroller = modeScrollerRef.current;
+    if (!scroller) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (delta === 0) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      scroller.scrollLeft += delta;
+    };
+
+    scroller.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      scroller.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -56,7 +110,16 @@ export function HomeView({
           </p>
         </div>
 
-        <div className="-mx-1 overflow-x-auto no-scrollbar px-1 pb-1 snap-x snap-mandatory">
+        <div
+          ref={modeScrollerRef}
+          className={`-mx-1 overflow-x-auto no-scrollbar px-1 pb-1 snap-x snap-mandatory select-none ${
+            isDraggingMode ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+          onMouseDown={handleModeMouseDown}
+          onMouseMove={handleModeMouseMove}
+          onMouseUp={handleModeMouseUp}
+          onMouseLeave={handleModeMouseUp}
+        >
           <div className="flex gap-3">
             {gameModes.map(mode => {
               const Icon = mode.icon;
@@ -71,7 +134,13 @@ export function HomeView({
                       ? 'bg-white text-black border-white shadow-lg'
                       : 'bg-[#1C1C1E] text-white border-white/5'
                   }`}
-                  onClick={() => onSelectMode(mode.id)}
+                  onClick={() => {
+                    if (hasDraggedModeRef.current) {
+                      hasDraggedModeRef.current = false;
+                      return;
+                    }
+                    onSelectMode(mode.id);
+                  }}
                 >
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${
