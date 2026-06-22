@@ -1,5 +1,5 @@
 import { GameMode, Player, Theme } from '../../types';
-import { ChevronRight, Dice5, Layers3, User, UserRound } from 'lucide-react';
+import { ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
 
 interface HomeViewProps {
   players: Player[];
@@ -27,6 +27,12 @@ const gameModes: Array<{
     title: '任务卡牌模式',
     desc: '轮流抽取任务，不用投骰子',
     icon: Layers3
+  },
+  {
+    id: 'pose',
+    title: '姿势模式',
+    desc: '轮流抽取姿势图片',
+    icon: ImageIcon
   }
 ];
 
@@ -38,12 +44,16 @@ export function HomeView({
   onSelectTheme,
   onStartGame
 }: HomeViewProps) {
+  const shouldShowThemeSelectors = gameMode !== 'pose';
+
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar space-y-6 pt-2 pb-4">
         <div className="text-center mb-4">
           <h2 className="text-xl text-gray-300 font-medium">配置游戏角色</h2>
-          <p className="text-sm text-gray-500 mt-2">选择游戏模式和双方任务主题包</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {shouldShowThemeSelectors ? '选择游戏模式和双方任务主题包' : '选择游戏模式即可开始'}
+          </p>
         </div>
 
         <div className="-mx-1 overflow-x-auto no-scrollbar px-1 pb-1 snap-x snap-mandatory">
@@ -80,6 +90,7 @@ export function HomeView({
           </div>
         </div>
 
+        {shouldShowThemeSelectors && (
         <div className="space-y-4">
           {players.map((player, idx) => {
             const theme = themes.find(t => t.id === player.themeId);
@@ -119,6 +130,7 @@ export function HomeView({
             );
           })}
         </div>
+        )}
       </div>
 
       <div className="relative z-20 shrink-0 pt-3 pb-1 bg-gradient-to-t from-black via-black/95 to-black/0">
@@ -127,7 +139,9 @@ export function HomeView({
           className="w-full h-14 bg-white rounded-full text-black font-semibold text-lg shadow-lg ios-btn flex items-center justify-center gap-2"
           onClick={onStartGame}
         >
-          <span>{gameMode === 'card' ? '开始抽卡' : '开始游戏'}</span>
+          <span>
+            {gameMode === 'card' ? '开始抽卡' : gameMode === 'pose' ? '开始抽姿势' : '开始游戏'}
+          </span>
           <ChevronRight size={20} />
         </button>
       </div>

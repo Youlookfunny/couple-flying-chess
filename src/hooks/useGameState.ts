@@ -209,10 +209,15 @@ function normalizeGameState(saved: unknown): GameState | null {
 
   return {
     view:
-      s.view === 'home' || s.view === 'game' || s.view === 'card' || s.view === 'themes'
+      s.view === 'home' || s.view === 'game' || s.view === 'card' || s.view === 'pose' || s.view === 'themes'
         ? s.view
         : 'home',
-    gameMode: s.gameMode === 'card' || s.view === 'card' ? 'card' : 'board',
+    gameMode:
+      s.gameMode === 'pose' || s.view === 'pose'
+        ? 'pose'
+        : s.gameMode === 'card' || s.view === 'card'
+          ? 'card'
+          : 'board',
     turn: s.turn === 0 || s.turn === 1 ? s.turn : 0,
     players,
     themes,
@@ -443,11 +448,11 @@ export function useGameState() {
   }, []);
 
   const startGame = useCallback(() => {
-    if (!canStartWithThemes(state.players, state.themes)) return false;
+    if (state.gameMode !== 'pose' && !canStartWithThemes(state.players, state.themes)) return false;
 
     setState(prev => ({
       ...prev,
-      view: prev.gameMode === 'card' ? 'card' : 'game',
+      view: prev.gameMode === 'pose' ? 'pose' : prev.gameMode === 'card' ? 'card' : 'game',
       turn: Math.random() < 0.5 ? 0 : 1,
       players: prev.players.map(p => ({ ...p, step: 0 })),
       boardMap: generateBoardMap(),
@@ -455,7 +460,7 @@ export function useGameState() {
       isRolling: false
     }));
     return true;
-  }, [state.players, state.themes]);
+  }, [state.gameMode, state.players, state.themes]);
 
   const drawCardTask = useCallback((): TaskEventData | null => {
     return createRandomTaskEvent(state.players, state.themes, state.turn);

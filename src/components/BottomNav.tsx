@@ -1,12 +1,13 @@
 import { GamepadIcon, Layers } from 'lucide-react';
 
 interface BottomNavProps {
-  activeView: 'home' | 'game' | 'card' | 'themes';
+  activeView: 'home' | 'game' | 'card' | 'pose' | 'themes';
   onNavigate: (view: 'home' | 'themes') => void;
 }
 
 export function BottomNav({ activeView, onNavigate }: BottomNavProps) {
-  const isGameActive = activeView === 'home' || activeView === 'game' || activeView === 'card';
+  const isGameActive =
+    activeView === 'home' || activeView === 'game' || activeView === 'card' || activeView === 'pose';
 
   return (
     <nav className="h-[84px] ios-glass border-t border-white/5 flex items-start justify-around pt-3 shrink-0 z-50">

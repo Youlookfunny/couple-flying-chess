@@ -5,9 +5,11 @@ import { TaskEventData } from './types';
 import { HomeView } from './components/views/HomeView';
 import { GameView } from './components/views/GameView';
 import { CardModeView } from './components/views/CardModeView';
+import { PoseModeView } from './components/views/PoseModeView';
 import { ThemesView } from './components/views/ThemesView';
 import { ThemeSelectorModal } from './components/modals/ThemeSelectorModal';
 import { TaskCardModal } from './components/modals/TaskCardModal';
+import { PoseCardModal } from './components/modals/PoseCardModal';
 import { WinModal } from './components/modals/WinModal';
 import { BottomNav } from './components/BottomNav';
 import { ThemeCreateModal } from './components/modals/ThemeCreateModal';
@@ -39,6 +41,7 @@ function App() {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number>(0);
   const [taskData, setTaskData] = useState<TaskEventData | null>(null);
+  const [poseImageSrc, setPoseImageSrc] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<number | null>(null);
   const [isCreateThemeModalOpen, setIsCreateThemeModalOpen] = useState(false);
   const [editingThemeId, setEditingThemeId] = useState<string | null>(null);
@@ -81,6 +84,11 @@ function App() {
     resolveTask(taskData, 'reject');
   };
 
+  const handlePoseDone = () => {
+    setPoseImageSrc(null);
+    endTurn();
+  };
+
   const handleWin = (id: number) => {
     setWinnerId(id);
   };
@@ -91,6 +99,7 @@ function App() {
 
   const handleBackFromGame = () => {
     if (confirm('离开游戏？进度不会保存')) {
+      setPoseImageSrc(null);
       resetGame();
       switchView('home');
     }
@@ -181,6 +190,13 @@ function App() {
         onReject={handleTaskReject}
       />
 
+      <PoseCardModal
+        isOpen={!!poseImageSrc}
+        imageSrc={poseImageSrc}
+        onAccept={handlePoseDone}
+        onReject={handlePoseDone}
+      />
+
       <WinModal
         isOpen={!!winnerId}
         winnerName={winnerId !== null ? state.players[winnerId].name : ''}
@@ -248,6 +264,15 @@ function App() {
           currentTurn={state.turn}
           onDrawTask={drawCardTask}
           onTaskTrigger={handleTaskTrigger}
+          onBack={handleBackFromGame}
+        />
+      )}
+
+      {state.view === 'pose' && (
+        <PoseModeView
+          players={state.players}
+          currentTurn={state.turn}
+          onPoseTrigger={setPoseImageSrc}
           onBack={handleBackFromGame}
         />
       )}

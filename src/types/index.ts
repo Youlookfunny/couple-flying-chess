@@ -2,7 +2,7 @@ export type TileType = 'blank' | 'lucky' | 'trap';
 
 export type PlayerRole = 'male' | 'female';
 
-export type GameMode = 'board' | 'card';
+export type GameMode = 'board' | 'card' | 'pose';
 
 export interface Player {
   id: number;
@@ -37,7 +37,7 @@ export interface PathCoord {
 }
 
 export interface GameState {
-  view: 'home' | 'game' | 'card' | 'themes';
+  view: 'home' | 'game' | 'card' | 'pose' | 'themes';
   gameMode: GameMode;
   turn: number;
   players: Player[];
