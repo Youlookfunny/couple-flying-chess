@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameMode, Player, Theme } from '../../types';
-import { ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
 
 interface HomeViewProps {
   players: Player[];
@@ -37,6 +37,8 @@ const gameModes: Array<{
   }
 ];
 
+const MODE_SCROLL_HINT_THRESHOLD = 24;
+
 export function HomeView({
   players,
   themes,
@@ -51,6 +53,7 @@ export function HomeView({
   const dragStartScrollLeftRef = useRef(0);
   const hasDraggedModeRef = useRef(false);
   const [isDraggingMode, setIsDraggingMode] = useState(false);
+  const [modeScrollHint, setModeScrollHint] = useState({ left: false, right: false });
 
   const handleModeMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -100,6 +103,27 @@ export function HomeView({
     };
   }, []);
 
+  useEffect(() => {
+    const scroller = modeScrollerRef.current;
+    if (!scroller) return;
+
+    const updateModeScrollHint = () => {
+      setModeScrollHint({
+        left: scroller.scrollLeft > MODE_SCROLL_HINT_THRESHOLD,
+        right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2
+      });
+    };
+
+    updateModeScrollHint();
+    scroller.addEventListener('scroll', updateModeScrollHint);
+    window.addEventListener('resize', updateModeScrollHint);
+
+    return () => {
+      scroller.removeEventListener('scroll', updateModeScrollHint);
+      window.removeEventListener('resize', updateModeScrollHint);
+    };
+  }, []);
+
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar space-y-6 pt-2 pb-4">
@@ -110,52 +134,72 @@ export function HomeView({
           </p>
         </div>
 
-        <div
-          ref={modeScrollerRef}
-          className={`-mx-1 overflow-x-auto no-scrollbar px-1 pb-1 snap-x snap-mandatory select-none ${
-            isDraggingMode ? 'cursor-grabbing' : 'cursor-grab'
-          }`}
-          onMouseDown={handleModeMouseDown}
-          onMouseMove={handleModeMouseMove}
-          onMouseUp={handleModeMouseUp}
-          onMouseLeave={handleModeMouseUp}
-        >
-          <div className="flex gap-3">
-            {gameModes.map(mode => {
-              const Icon = mode.icon;
-              const isActive = mode.id === gameMode;
+        <div className="relative">
+          <div
+            ref={modeScrollerRef}
+            className={`-mx-1 overflow-x-auto no-scrollbar px-1 pb-1 snap-x snap-mandatory select-none ${
+              isDraggingMode ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+            onMouseDown={handleModeMouseDown}
+            onMouseMove={handleModeMouseMove}
+            onMouseUp={handleModeMouseUp}
+            onMouseLeave={handleModeMouseUp}
+          >
+            <div className="flex gap-3">
+              {gameModes.map(mode => {
+                const Icon = mode.icon;
+                const isActive = mode.id === gameMode;
 
-              return (
-                <button
-                  key={mode.id}
-                  type="button"
-                  className={`min-h-[108px] basis-[calc((100%_-_0.75rem)/2)] min-w-[168px] shrink-0 snap-start rounded-[20px] border p-4 text-left transition-all ios-btn ${
-                    isActive
-                      ? 'bg-white text-black border-white shadow-lg'
-                      : 'bg-[#1C1C1E] text-white border-white/5'
-                  }`}
-                  onClick={() => {
-                    if (hasDraggedModeRef.current) {
-                      hasDraggedModeRef.current = false;
-                      return;
-                    }
-                    onSelectMode(mode.id);
-                  }}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${
-                      isActive ? 'bg-black text-white' : 'bg-white/5 text-gray-300'
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={`min-h-[108px] basis-[calc((100%_-_0.75rem)/2)] min-w-[168px] shrink-0 snap-start rounded-[20px] border p-4 text-left transition-all ios-btn ${
+                      isActive
+                        ? 'bg-white text-black border-white shadow-lg'
+                        : 'bg-[#1C1C1E] text-white border-white/5'
                     }`}
+                    onClick={() => {
+                      if (hasDraggedModeRef.current) {
+                        hasDraggedModeRef.current = false;
+                        return;
+                      }
+                      onSelectMode(mode.id);
+                    }}
                   >
-                    <Icon size={22} />
-                  </div>
-                  <div className="text-sm font-bold leading-tight">{mode.title}</div>
-                  <div className={`text-xs leading-relaxed mt-1 ${isActive ? 'text-black/60' : 'text-gray-500'}`}>
-                    {mode.desc}
-                  </div>
-                </button>
-              );
-            })}
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${
+                        isActive ? 'bg-black text-white' : 'bg-white/5 text-gray-300'
+                      }`}
+                    >
+                      <Icon size={22} />
+                    </div>
+                    <div className="text-sm font-bold leading-tight">{mode.title}</div>
+                    <div className={`text-xs leading-relaxed mt-1 ${isActive ? 'text-black/60' : 'text-gray-500'}`}>
+                      {mode.desc}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div
+            className={`pointer-events-none absolute left-[-2px] top-0 bottom-1 w-16 flex items-center justify-start pl-1 bg-gradient-to-r from-black via-black/80 to-transparent transition-opacity duration-300 ${
+              modeScrollHint.left ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg">
+              <ChevronLeft size={18} />
+            </div>
+          </div>
+          <div
+            className={`pointer-events-none absolute right-[-2px] top-0 bottom-1 w-16 flex items-center justify-end pr-1 bg-gradient-to-l from-black via-black/80 to-transparent transition-opacity duration-300 ${
+              modeScrollHint.right ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg">
+              <ChevronRight size={18} />
+            </div>
           </div>
         </div>
 
