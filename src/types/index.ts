@@ -15,12 +15,20 @@ export interface Player {
 
 export type ThemeAudience = 'common' | 'male' | 'female';
 
+export type TaskExecutor = 'female' | 'male' | 'both';
+
+export interface TaskCard {
+  text: string;
+  executor: TaskExecutor;
+  moveDelta: number;
+}
+
 export interface Theme {
   id: string;
   name: string;
   desc: string;
   audience: ThemeAudience;
-  tasks: string[];
+  tasks: TaskCard[];
 }
 
 export interface PathCoord {
@@ -49,4 +57,5 @@ export interface TaskEventData {
   color: string;
   task: string;
   taskSourceId: string;
+  moveDelta: number;
 }

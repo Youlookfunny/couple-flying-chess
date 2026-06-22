@@ -4,7 +4,7 @@ interface AiImportModalProps {
   isOpen: boolean;
   themeName: string;
   onClose: () => void;
-  onImport: (tasks: string[], mode: 'append' | 'replace') => void;
+  onImport: (tasks: unknown[], mode: 'append' | 'replace') => void;
 }
 
 export function AiImportModal({ isOpen, themeName, onClose, onImport }: AiImportModalProps) {
@@ -179,13 +179,12 @@ export function AiImportModal({ isOpen, themeName, onClose, onImport }: AiImport
                     return;
                   }
 
-                  const tasks = list
-                    .map(item => {
-                      if (typeof item === 'string') return item.trim();
-                      if (isRecord(item) && typeof item.task === 'string') return item.task.trim();
-                      return '';
-                    })
-                    .filter((t): t is string => t.length > 0);
+                  const tasks = list.filter(item => {
+                    if (typeof item === 'string') return item.trim().length > 0;
+                    if (!isRecord(item)) return Array.isArray(item);
+                    const textValue = item.text ?? item.task;
+                    return typeof textValue === 'string' && textValue.trim().length > 0;
+                  });
 
                   if (tasks.length === 0) {
                     setError('没有解析到任何任务卡文本');

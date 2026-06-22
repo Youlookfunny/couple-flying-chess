@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, Wand2 } from 'lucide-react';
-import { Theme } from '../../types';
+import { TaskExecutor, Theme } from '../../types';
 
 interface ThemeEditorModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface ThemeEditorModalProps {
   onClose: () => void;
   onSaveMeta: (themeId: string, patch: Partial<Pick<Theme, 'name' | 'desc' | 'audience'>>) => void;
   onAddTask: (themeId: string, taskText: string) => void;
+  onUpdateTask: (themeId: string, index: number, patch: Partial<Theme['tasks'][number]>) => void;
   onRemoveTask: (themeId: string, index: number) => void;
   onOpenAiImport: (themeId: string) => void;
 }
@@ -18,12 +19,19 @@ const audienceOptions: Array<{ value: Theme['audience']; label: string }> = [
   { value: 'female', label: '仅限女方' }
 ];
 
+const taskExecutorOptions: Array<{ value: TaskExecutor; label: string }> = [
+  { value: 'male', label: '男' },
+  { value: 'female', label: '女' },
+  { value: 'both', label: '通' }
+];
+
 export function ThemeEditorModal({
   isOpen,
   theme,
   onClose,
   onSaveMeta,
   onAddTask,
+  onUpdateTask,
   onRemoveTask,
   onOpenAiImport
 }: ThemeEditorModalProps) {
@@ -157,16 +165,55 @@ export function ThemeEditorModal({
               {theme.tasks.map((t, idx) => (
                 <div
                   key={`${theme.id}_${idx}`}
-                  className="p-3 bg-[#2C2C2E] rounded-xl flex gap-3 items-start border border-white/5"
+                  className="p-3 bg-[#2C2C2E] rounded-xl flex gap-3 items-center border border-white/5"
                 >
-                  <div className="text-[11px] text-gray-500 mt-0.5">{idx + 1}</div>
-                  <div className="flex-1 text-sm text-white leading-relaxed">{t}</div>
-                  <button
-                    className="h-8 w-8 rounded-lg bg-black/20 text-[#FF453A] ios-btn flex items-center justify-center"
-                    onClick={() => onRemoveTask(theme.id, idx)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="text-[11px] text-gray-500">{idx + 1}</div>
+                  <div className="flex-1 min-w-0 text-sm text-white leading-relaxed">{t.text}</div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex rounded-lg overflow-hidden border border-white/5 bg-black/20">
+                      {taskExecutorOptions.map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`h-8 w-8 text-xs font-bold ios-btn ${
+                            t.executor === opt.value ? 'bg-white text-black' : 'text-gray-300'
+                          }`}
+                          onClick={() => onUpdateTask(theme.id, idx, { executor: opt.value })}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center rounded-lg overflow-hidden border border-white/5 bg-black/20">
+                      <button
+                        type="button"
+                        className="h-8 w-8 text-sm font-bold text-gray-200 ios-btn"
+                        onClick={() => onUpdateTask(theme.id, idx, { moveDelta: t.moveDelta - 1 })}
+                      >
+                        -
+                      </button>
+                      <div
+                        className={`h-8 min-w-8 px-2 flex items-center justify-center text-xs font-bold ${
+                          t.moveDelta === 0 ? 'text-gray-500' : t.moveDelta > 0 ? 'text-[#30D158]' : 'text-[#FF453A]'
+                        }`}
+                      >
+                        {t.moveDelta > 0 ? `+${t.moveDelta}` : t.moveDelta}
+                      </div>
+                      <button
+                        type="button"
+                        className="h-8 w-8 text-sm font-bold text-gray-200 ios-btn"
+                        onClick={() => onUpdateTask(theme.id, idx, { moveDelta: t.moveDelta + 1 })}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      className="h-8 w-8 shrink-0 rounded-lg bg-black/20 text-[#FF453A] ios-btn flex items-center justify-center"
+                      onClick={() => onRemoveTask(theme.id, idx)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
               {theme.tasks.length === 0 && (

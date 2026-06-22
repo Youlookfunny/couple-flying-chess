@@ -23,6 +23,7 @@ function App() {
     createTheme,
     updateThemeMeta,
     addThemeTask,
+    updateThemeTask,
     removeThemeTask,
     importThemeTasks,
     startGame,
@@ -208,6 +209,7 @@ function App() {
         }}
         onSaveMeta={(themeId, patch) => updateThemeMeta(themeId, patch)}
         onAddTask={(themeId, taskText) => addThemeTask(themeId, taskText)}
+        onUpdateTask={updateThemeTask}
         onRemoveTask={(themeId, index) => removeThemeTask(themeId, index)}
         onOpenAiImport={themeId => setAiImportThemeId(themeId)}
       />

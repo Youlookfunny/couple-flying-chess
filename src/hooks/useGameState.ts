@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GameMode, GameState, Player, TaskEventData, Theme } from '../types';
+import { GameMode, GameState, Player, TaskCard, TaskEventData, TaskExecutor, Theme } from '../types';
 import { loadFromStorage, saveToStorage } from '../utils/localStorage';
 import { generateSpiralPath, generateBoardMap, calculateNewPosition } from '../utils/gameLogic';
 import { DEFAULT_THEMES } from '../data/defaultThemes';
@@ -17,6 +17,125 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isThemeAllowedForRole(theme: Theme, role: Player['role']) {
   return theme.audience === 'common' || theme.audience === role;
+}
+
+function normalizeExecutor(value: unknown): TaskExecutor {
+  if (value === 1 || value === '1') return 'female';
+  if (value === 2 || value === '2') return 'male';
+  if (value === 3 || value === '3') return 'both';
+  return value === 'female' || value === 'male' || value === 'both' ? value : 'both';
+}
+
+function clampMoveDelta(value: unknown) {
+  if (typeof value === 'string' && /^[-+]\d+$/.test(value.trim())) {
+    return clampMoveDelta(Number(value));
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.max(-12, Math.min(12, Math.trunc(value)));
+}
+
+function parseTaskText(input: string): TaskCard | null {
+  const parts = input.split(',').map(part => part.trim());
+  const maybeExecutor = parts.length >= 2 ? parts[parts.length - 2] : '';
+  const maybeMove = parts.length >= 3 ? parts[parts.length - 1] : '';
+  const hasExecutor = maybeExecutor === '1' || maybeExecutor === '2' || maybeExecutor === '3';
+  const hasMove = /^[-+]\d+$/.test(maybeMove);
+
+  if (!hasExecutor) {
+    const text = input.trim();
+    return text ? { text, executor: 'both', moveDelta: 0 } : null;
+  }
+
+  const metadataCount = hasMove ? 2 : 1;
+  const text = parts.slice(0, parts.length - metadataCount).join(',').trim();
+  if (!text) return null;
+
+  return {
+    text,
+    executor: normalizeExecutor(maybeExecutor),
+    moveDelta: hasMove ? clampMoveDelta(maybeMove) : 0
+  };
+}
+
+function normalizeTask(input: unknown): TaskCard | null {
+  if (typeof input === 'string') {
+    return parseTaskText(input);
+  }
+
+  if (Array.isArray(input)) {
+    const [textValue, executorValue, moveValue] = input;
+    const text = typeof textValue === 'string' ? textValue.trim() : '';
+    if (!text) return null;
+
+    return {
+      text,
+      executor: normalizeExecutor(executorValue),
+      moveDelta: clampMoveDelta(moveValue)
+    };
+  }
+
+  if (!isRecord(input)) return null;
+
+  const textValue = input.text ?? input.task;
+  const text = typeof textValue === 'string' ? textValue.trim() : '';
+  if (!text) return null;
+
+  return {
+    text,
+    executor: normalizeExecutor(input.executor),
+    moveDelta: clampMoveDelta(input.moveDelta)
+  };
+}
+
+function getTaskKey(task: TaskCard) {
+  return `${task.text}__${task.executor}__${task.moveDelta}`;
+}
+
+function chooseRandomTask(theme: Theme | undefined): TaskCard | null {
+  if (!theme || theme.tasks.length === 0) return null;
+  return theme.tasks[Math.floor(Math.random() * theme.tasks.length)];
+}
+
+function getExecutorPlayerId(task: TaskCard, fallbackPlayerId: number) {
+  if (task.executor === 'female') return 1;
+  if (task.executor === 'male') return 0;
+  return fallbackPlayerId;
+}
+
+function formatMoveDelta(moveDelta: number) {
+  if (moveDelta === 0) return '';
+  return moveDelta > 0 ? `，完成后前进${moveDelta}格` : `，完成后后退${Math.abs(moveDelta)}格`;
+}
+
+function buildTaskEvent(input: {
+  type: TaskEventData['type'];
+  initiatorPlayerId: number;
+  fallbackExecutorPlayerId: number;
+  title: string;
+  subtitle: string;
+  icon: string;
+  color: string;
+  task: TaskCard;
+  taskSourceId: string;
+}): TaskEventData {
+  return {
+    type: input.type,
+    initiatorPlayerId: input.initiatorPlayerId,
+    executorPlayerId: getExecutorPlayerId(input.task, input.fallbackExecutorPlayerId),
+    title: input.title,
+    subtitle: `${input.subtitle}${formatMoveDelta(input.task.moveDelta)}`,
+    icon: input.icon,
+    color: input.color,
+    task: input.task.text,
+    taskSourceId: input.taskSourceId,
+    moveDelta: input.task.moveDelta
+  };
+}
+
+function applyMoveDelta(step: number, moveDelta: number) {
+  if (moveDelta > 0) return calculateNewPosition(step, moveDelta);
+  if (moveDelta < 0) return Math.max(0, step + moveDelta);
+  return step;
 }
 
 function normalizePlayers(input: unknown): Player[] {
@@ -43,7 +162,7 @@ function normalizePlayers(input: unknown): Player[] {
 
 function normalizeThemes(input: unknown): Theme[] {
   const incoming = Array.isArray(input) ? input : [];
-  const source = incoming.length > 0 ? incoming : DEFAULT_THEMES;
+  const source = incoming.length > 0 ? [...incoming, ...DEFAULT_THEMES] : DEFAULT_THEMES;
 
   return source
     .map(t => {
@@ -51,8 +170,8 @@ function normalizeThemes(input: unknown): Theme[] {
       const tasksValue = record.tasks;
       const tasks = Array.isArray(tasksValue)
         ? tasksValue
-            .map(x => (typeof x === 'string' ? x.trim() : ''))
-            .filter((x): x is string => x.length > 0)
+            .map(normalizeTask)
+            .filter((x): x is TaskCard => !!x)
         : [];
 
       const audienceValue = record.audience;
@@ -137,18 +256,21 @@ function createRandomTaskEvent(
 
   const theme = themes.find(t => t.id === player.themeId);
   if (!theme || theme.tasks.length === 0) return null;
+  const task = chooseRandomTask(theme);
 
-  return {
+  if (!task) return null;
+
+  return buildTaskEvent({
     type: 'card',
     initiatorPlayerId: player.id,
-    executorPlayerId: player.id,
+    fallbackExecutorPlayerId: player.id,
     title: '任务卡牌',
     subtitle: `任务来自「${theme.name}」`,
     icon: 'sparkles',
     color: player.role === 'male' ? 'text-[#0A84FF]' : 'text-[#FF375F]',
-    task: theme.tasks[Math.floor(Math.random() * theme.tasks.length)],
+    task,
     taskSourceId: theme.id
-  };
+  });
 }
 
 export function useGameState() {
@@ -242,15 +364,42 @@ export function useGameState() {
   }, []);
 
   const addThemeTask = useCallback((themeId: string, taskText: string) => {
-    const trimmed = taskText.trim();
-    if (!trimmed) return;
+    const task = normalizeTask(taskText);
+    if (!task) return;
 
     setState(prev => ({
       ...prev,
       themes: prev.themes.map(t => {
         if (t.id !== themeId) return t;
-        if (t.tasks.includes(trimmed)) return t;
-        return { ...t, tasks: [...t.tasks, trimmed] };
+        if (t.tasks.some(item => getTaskKey(item) === getTaskKey(task))) return t;
+        return { ...t, tasks: [...t.tasks, task] };
+      })
+    }));
+  }, []);
+
+  const updateThemeTask = useCallback((themeId: string, index: number, patch: Partial<TaskCard>) => {
+    setState(prev => ({
+      ...prev,
+      themes: prev.themes.map(t => {
+        if (t.id !== themeId) return t;
+        if (index < 0 || index >= t.tasks.length) return t;
+
+        return {
+          ...t,
+          tasks: t.tasks.map((task, taskIndex) => {
+            if (taskIndex !== index) return task;
+
+            return {
+              ...task,
+              text: typeof patch.text === 'string' ? patch.text.trim() || task.text : task.text,
+              executor: patch.executor ? normalizeExecutor(patch.executor) : task.executor,
+              moveDelta:
+                typeof patch.moveDelta === 'number'
+                  ? clampMoveDelta(patch.moveDelta)
+                  : task.moveDelta
+            };
+          })
+        };
       })
     }));
   }, []);
@@ -266,10 +415,10 @@ export function useGameState() {
     }));
   }, []);
 
-  const importThemeTasks = useCallback((themeId: string, tasks: string[], mode: 'append' | 'replace' = 'append') => {
+  const importThemeTasks = useCallback((themeId: string, tasks: unknown[], mode: 'append' | 'replace' = 'append') => {
     const cleaned = tasks
-      .map(t => (typeof t === 'string' ? t.trim() : ''))
-      .filter(t => t.length > 0);
+      .map(normalizeTask)
+      .filter((t): t is TaskCard => !!t);
 
     if (cleaned.length === 0) return;
 
@@ -279,11 +428,12 @@ export function useGameState() {
         if (t.id !== themeId) return t;
         const base = mode === 'replace' ? [] : t.tasks;
         const seen = new Set<string>();
-        const merged: string[] = [];
+        const merged: TaskCard[] = [];
 
         for (const item of [...base, ...cleaned]) {
-          if (seen.has(item)) continue;
-          seen.add(item);
+          const key = getTaskKey(item);
+          if (seen.has(key)) continue;
+          seen.add(key);
           merged.push(item);
         }
 
@@ -347,55 +497,58 @@ export function useGameState() {
 
     if (landingStep !== 0 && landingStep === opponent.step) {
       const theme = state.themes.find(t => t.id === activePlayer.themeId);
-      const task = theme?.tasks[Math.floor(Math.random() * theme.tasks.length)] || '';
+      const task = chooseRandomTask(theme);
+      if (!task) return null;
 
-      return {
+      return buildTaskEvent({
         type: 'collision',
         initiatorPlayerId: activePlayer.id,
-        executorPlayerId: opponent.id,
+        fallbackExecutorPlayerId: opponent.id,
         title: '亲密追尾',
         subtitle: `任务来自「${theme?.name || ''}」`,
         icon: 'handshake',
         color: 'text-yellow-400',
         task,
         taskSourceId: activePlayer.themeId || ''
-      };
+      });
     }
 
     const tileType = state.boardMap[landingStep];
 
     if (tileType === 'lucky') {
       const theme = state.themes.find(t => t.id === activePlayer.themeId);
-      const task = theme?.tasks[Math.floor(Math.random() * theme.tasks.length)] || '';
+      const task = chooseRandomTask(theme);
+      if (!task) return null;
 
-      return {
+      return buildTaskEvent({
         type: 'lucky',
         initiatorPlayerId: activePlayer.id,
-        executorPlayerId: opponent.id,
+        fallbackExecutorPlayerId: opponent.id,
         title: '幸运时刻',
         subtitle: `任务来自「${theme?.name || ''}」`,
         icon: 'favorite',
         color: 'text-[#FF375F]',
         task,
         taskSourceId: activePlayer.themeId || ''
-      };
+      });
     }
 
     if (tileType === 'trap') {
       const theme = state.themes.find(t => t.id === opponent.themeId);
-      const task = theme?.tasks[Math.floor(Math.random() * theme.tasks.length)] || '';
+      const task = chooseRandomTask(theme);
+      if (!task) return null;
 
-      return {
+      return buildTaskEvent({
         type: 'trap',
         initiatorPlayerId: activePlayer.id,
-        executorPlayerId: activePlayer.id,
+        fallbackExecutorPlayerId: activePlayer.id,
         title: '意外陷阱',
         subtitle: `任务来自「${theme?.name || ''}」`,
         icon: 'lock',
         color: 'text-[#BF5AF2]',
         task,
         taskSourceId: opponent.themeId || ''
-      };
+      });
     }
 
     return null;
@@ -404,6 +557,14 @@ export function useGameState() {
   const resolveTask = useCallback((task: TaskEventData, outcome: 'accept' | 'reject') => {
     setState(prev => {
       let nextPlayers = prev.players;
+
+      if (outcome === 'accept' && task.moveDelta !== 0) {
+        nextPlayers = prev.players.map(p =>
+          p.id === task.executorPlayerId
+            ? { ...p, step: applyMoveDelta(p.step, task.moveDelta) }
+            : p
+        );
+      }
 
       if (outcome === 'reject' && task.type !== 'card') {
         const backSteps = Math.floor(Math.random() * 3) + 1;
@@ -448,6 +609,7 @@ export function useGameState() {
     createTheme,
     updateThemeMeta,
     addThemeTask,
+    updateThemeTask,
     removeThemeTask,
     importThemeTasks,
     startGame,

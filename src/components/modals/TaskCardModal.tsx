@@ -45,6 +45,12 @@ export function TaskCardModal({ isOpen, taskData, onAccept, onReject }: TaskCard
         : '拒绝（倒退1~3格）';
   const executorLabel = visibleTaskData.executorPlayerId === 0 ? '男方' : '女方';
   const executorClassName = visibleTaskData.executorPlayerId === 0 ? 'text-[#0A84FF]' : 'text-[#FF375F]';
+  const moveLabel =
+    visibleTaskData.moveDelta === 0
+      ? ''
+      : visibleTaskData.moveDelta > 0
+        ? `完成后前进 ${visibleTaskData.moveDelta} 格`
+        : `完成后后退 ${Math.abs(visibleTaskData.moveDelta)} 格`;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center px-6">
@@ -79,6 +85,7 @@ export function TaskCardModal({ isOpen, taskData, onAccept, onReject }: TaskCard
                 <div>
                   由 <span className={executorClassName}>{executorLabel}</span> 执行
                 </div>
+                {moveLabel && <div className="mt-1 text-gray-300">{moveLabel}</div>}
               </div>
 
               <div className="w-full bg-[#2C2C2E] rounded-xl p-6 min-h-[120px] flex items-center justify-center border border-white/5 mb-6">
