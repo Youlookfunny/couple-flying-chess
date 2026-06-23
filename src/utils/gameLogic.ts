@@ -1,7 +1,8 @@
-import { TileType, PathCoord } from '../types';
+import { MineTile, MineTileType, TileType, PathCoord } from '../types';
 
 const GRID_SIZE = 7;
 const TILES_COUNT = 49;
+const MINE_TILES_COUNT = 36;
 
 export function generateSpiralPath(): PathCoord[] {
   const path: PathCoord[] = [];
@@ -52,6 +53,26 @@ export function generateBoardMap(): TileType[] {
   }
 
   return boardMap;
+}
+
+export function generateMineBoard(): MineTile[] {
+  const tileTypes: MineTileType[] = [
+    ...new Array<MineTileType>(7).fill('bomb'),
+    ...new Array<MineTileType>(8).fill('truth'),
+    ...new Array<MineTileType>(8).fill('dare'),
+    ...new Array<MineTileType>(5).fill('blank'),
+    ...new Array<MineTileType>(8).fill('theme')
+  ];
+
+  for (let i = tileTypes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tileTypes[i], tileTypes[j]] = [tileTypes[j], tileTypes[i]];
+  }
+
+  return tileTypes.slice(0, MINE_TILES_COUNT).map(type => ({
+    type,
+    revealed: false
+  }));
 }
 
 export function calculateNewPosition(current: number, steps: number): number {

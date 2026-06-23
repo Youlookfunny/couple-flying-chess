@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameMode, Player, Theme } from '../../types';
-import { ChevronLeft, ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
+import { Bomb, ChevronLeft, ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
 
 interface HomeViewProps {
   players: Player[];
@@ -28,6 +28,12 @@ const gameModes: Array<{
     title: '任务卡牌模式',
     desc: '轮流抽取任务，不用投骰子',
     icon: Layers3
+  },
+  {
+    id: 'mine',
+    title: '扫雷模式',
+    desc: '点击方格，触发隐藏事件',
+    icon: Bomb
   },
   {
     id: 'pose',
@@ -253,7 +259,13 @@ export function HomeView({
           onClick={onStartGame}
         >
           <span>
-            {gameMode === 'card' ? '开始抽卡' : gameMode === 'pose' ? '开始抽姿势' : '开始游戏'}
+            {gameMode === 'card'
+              ? '开始抽卡'
+              : gameMode === 'pose'
+                ? '开始抽姿势'
+                : gameMode === 'mine'
+                  ? '开始扫雷'
+                  : '开始游戏'}
           </span>
           <ChevronRight size={20} />
         </button>

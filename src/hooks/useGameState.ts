@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GameMode, GameState, Player, TaskCard, TaskEventData, TaskExecutor, Theme } from '../types';
+import {
+  GameMode,
+  GameState,
+  MineRevealResult,
+  MineTaskChoice,
+  MineTile,
+  MineTileType,
+  Player,
+  TaskCard,
+  TaskEventData,
+  TaskExecutor,
+  Theme
+} from '../types';
 import { loadFromStorage, saveToStorage } from '../utils/localStorage';
-import { generateSpiralPath, generateBoardMap, calculateNewPosition } from '../utils/gameLogic';
+import { generateSpiralPath, generateBoardMap, calculateNewPosition, generateMineBoard } from '../utils/gameLogic';
 import { DEFAULT_THEMES } from '../data/defaultThemes';
 
 const STORAGE_KEY = 'couples-ludo-game-state';
@@ -10,6 +22,35 @@ const initialPlayers: Player[] = [
   { id: 0, name: '男方', color: '#0A84FF', role: 'male', step: 0, themeId: null },
   { id: 1, name: '女方', color: '#FF375F', role: 'female', step: 0, themeId: null }
 ];
+
+const MINE_TRUTH_TASKS: TaskCard[] = [
+  { text: '说出最近一次因为对方心动的具体瞬间', executor: 'both', moveDelta: 0 },
+  { text: '回答：你最希望对方今晚主动做的一件小事是什么？', executor: 'both', moveDelta: 0 },
+  { text: '说出一个你平时不好意思开口表达的需求', executor: 'both', moveDelta: 0 },
+  { text: '回答：对方哪个细节最容易让你失去抵抗力？', executor: 'both', moveDelta: 0 },
+  { text: '说出一件你想和对方一起尝试、但还没说出口的事', executor: 'both', moveDelta: 0 },
+  { text: '回答：如果今晚只能保留一个亲密动作，你会选什么？', executor: 'both', moveDelta: 0 },
+  { text: '说出你最喜欢对方夸你的哪一句话', executor: 'both', moveDelta: 0 },
+  { text: '回答：你希望下一次约会出现在哪个场景里？', executor: 'both', moveDelta: 0 },
+  { text: '说出一个你觉得对方特别可爱的习惯', executor: 'both', moveDelta: 0 },
+  { text: '回答：你最想被对方怎样哄开心？', executor: 'both', moveDelta: 0 }
+];
+
+const MINE_DARE_TASKS: TaskCard[] = [
+  { text: '看着对方眼睛，用认真语气夸对方三个优点', executor: 'both', moveDelta: 0 },
+  { text: '给对方一个不少于20秒的拥抱', executor: 'both', moveDelta: 0 },
+  { text: '用手指在对方掌心写一句暗号，让对方猜', executor: 'both', moveDelta: 0 },
+  { text: '让对方指定一个称呼，并用这个称呼说一句情话', executor: 'both', moveDelta: 0 },
+  { text: '为对方按摩肩颈1分钟', executor: 'both', moveDelta: 0 },
+  { text: '贴近对方耳边，用很轻的声音说一句喜欢', executor: 'both', moveDelta: 0 },
+  { text: '和对方十指紧扣，保持30秒不说话', executor: 'both', moveDelta: 0 },
+  { text: '模仿对方撒娇或害羞的样子', executor: 'both', moveDelta: 0 },
+  { text: '让对方选择一个脸颊或额头亲吻', executor: 'both', moveDelta: 0 },
+  { text: '把下一分钟的主动权交给对方安排', executor: 'both', moveDelta: 0 }
+];
+
+const MINE_BOARD_SIZE = 36;
+const MINE_TILE_TYPES = new Set<MineTileType>(['bomb', 'truth', 'dare', 'blank', 'theme']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -94,6 +135,10 @@ function getTaskKey(task: TaskCard) {
 function chooseRandomTask(theme: Theme | undefined): TaskCard | null {
   if (!theme || theme.tasks.length === 0) return null;
   return theme.tasks[Math.floor(Math.random() * theme.tasks.length)];
+}
+
+function chooseRandomTaskFromList(tasks: TaskCard[]): TaskCard {
+  return tasks[Math.floor(Math.random() * tasks.length)];
 }
 
 function getExecutorPlayerId(task: TaskCard, fallbackPlayerId: number) {
@@ -194,6 +239,22 @@ function normalizeThemes(input: unknown): Theme[] {
     }, []);
 }
 
+function normalizeMineBoard(input: unknown): MineTile[] {
+  const incoming = Array.isArray(input) ? input : [];
+  const mineBoard = incoming
+    .slice(0, MINE_BOARD_SIZE)
+    .map(tile => {
+      if (!isRecord(tile) || !MINE_TILE_TYPES.has(tile.type as MineTileType)) return null;
+      return {
+        type: tile.type as MineTileType,
+        revealed: !!tile.revealed
+      };
+    })
+    .filter((tile): tile is MineTile => !!tile);
+
+  return mineBoard.length === MINE_BOARD_SIZE ? mineBoard : generateMineBoard();
+}
+
 function normalizeGameState(saved: unknown): GameState | null {
   if (!isRecord(saved)) return null;
   const s = saved;
@@ -209,7 +270,12 @@ function normalizeGameState(saved: unknown): GameState | null {
 
   return {
     view:
-      s.view === 'home' || s.view === 'game' || s.view === 'card' || s.view === 'pose' || s.view === 'themes'
+      s.view === 'home' ||
+      s.view === 'game' ||
+      s.view === 'card' ||
+      s.view === 'pose' ||
+      s.view === 'mine' ||
+      s.view === 'themes'
         ? s.view
         : 'home',
     gameMode:
@@ -217,12 +283,15 @@ function normalizeGameState(saved: unknown): GameState | null {
         ? 'pose'
         : s.gameMode === 'card' || s.view === 'card'
           ? 'card'
-          : 'board',
+          : s.gameMode === 'mine' || s.view === 'mine'
+            ? 'mine'
+            : 'board',
     turn: s.turn === 0 || s.turn === 1 ? s.turn : 0,
     players,
     themes,
     boardMap: Array.isArray(s.boardMap) ? s.boardMap : generateBoardMap(),
     pathCoords: Array.isArray(s.pathCoords) ? s.pathCoords : generateSpiralPath(),
+    mineBoard: normalizeMineBoard(s.mineBoard),
     isRolling: !!s.isRolling
   };
 }
@@ -278,6 +347,65 @@ function createRandomTaskEvent(
   });
 }
 
+function createMineTaskEvent(
+  players: Player[],
+  themes: Theme[],
+  playerId: number,
+  choice: MineTaskChoice,
+  selectedByPlayerId?: number
+): TaskEventData | null {
+  const player = players.find(p => p.id === playerId);
+  const selector = players.find(p => p.id === selectedByPlayerId);
+  if (!player) return null;
+
+  const selectedPrefix = selector ? `${selector.name}指定` : '扫雷事件';
+
+  if (choice === 'truth') {
+    return buildTaskEvent({
+      type: 'mineTruth',
+      initiatorPlayerId: player.id,
+      fallbackExecutorPlayerId: player.id,
+      title: '真心话',
+      subtitle: selectedPrefix,
+      icon: 'message-question',
+      color: 'text-[#64D2FF]',
+      task: chooseRandomTaskFromList(MINE_TRUTH_TASKS),
+      taskSourceId: 'mine_truth'
+    });
+  }
+
+  if (choice === 'dare') {
+    return buildTaskEvent({
+      type: 'mineDare',
+      initiatorPlayerId: player.id,
+      fallbackExecutorPlayerId: player.id,
+      title: '大冒险',
+      subtitle: selectedPrefix,
+      icon: 'flame',
+      color: 'text-[#FF9F0A]',
+      task: chooseRandomTaskFromList(MINE_DARE_TASKS),
+      taskSourceId: 'mine_dare'
+    });
+  }
+
+  if (!player.themeId) return null;
+  const theme = themes.find(t => t.id === player.themeId);
+  const task = chooseRandomTask(theme);
+  if (!task) return null;
+
+  return buildTaskEvent({
+    type: 'mineTheme',
+    initiatorPlayerId: player.id,
+    fallbackExecutorPlayerId: player.id,
+    title: '主题任务',
+    subtitle: `${selectedPrefix}，任务来自「${theme?.name || ''}」`,
+    icon: 'sparkles',
+    color: player.role === 'male' ? 'text-[#0A84FF]' : 'text-[#FF375F]',
+    task: { ...task, moveDelta: 0 },
+    taskSourceId: player.themeId
+  });
+}
+
 export function useGameState() {
   const [state, setState] = useState<GameState>(() => {
     const saved = loadFromStorage<GameState | null>(STORAGE_KEY, null);
@@ -295,6 +423,7 @@ export function useGameState() {
       themes: DEFAULT_THEMES,
       boardMap: generateBoardMap(),
       pathCoords: generateSpiralPath(),
+      mineBoard: generateMineBoard(),
       isRolling: false
     };
   });
@@ -452,11 +581,19 @@ export function useGameState() {
 
     setState(prev => ({
       ...prev,
-      view: prev.gameMode === 'pose' ? 'pose' : prev.gameMode === 'card' ? 'card' : 'game',
+      view:
+        prev.gameMode === 'pose'
+          ? 'pose'
+          : prev.gameMode === 'card'
+            ? 'card'
+            : prev.gameMode === 'mine'
+              ? 'mine'
+              : 'game',
       turn: Math.random() < 0.5 ? 0 : 1,
       players: prev.players.map(p => ({ ...p, step: 0 })),
       boardMap: generateBoardMap(),
       pathCoords: generateSpiralPath(),
+      mineBoard: generateMineBoard(),
       isRolling: false
     }));
     return true;
@@ -464,6 +601,38 @@ export function useGameState() {
 
   const drawCardTask = useCallback((): TaskEventData | null => {
     return createRandomTaskEvent(state.players, state.themes, state.turn);
+  }, [state.players, state.themes, state.turn]);
+
+  const revealMineTile = useCallback((index: number): MineRevealResult | null => {
+    const tile = state.mineBoard[index];
+    const activePlayer = state.players[state.turn];
+
+    if (!tile || tile.revealed || !activePlayer) return null;
+
+    setState(prev => ({
+      ...prev,
+      mineBoard: prev.mineBoard.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, revealed: true } : item
+      )
+    }));
+
+    if (tile.type === 'bomb') return { type: 'bomb' };
+    if (tile.type === 'blank') return { type: 'blank' };
+
+    const choice: MineTaskChoice =
+      tile.type === 'truth' ? 'truth' : tile.type === 'dare' ? 'dare' : 'theme';
+    const task = createMineTaskEvent(state.players, state.themes, activePlayer.id, choice);
+
+    return task ? { type: 'task', task } : { type: 'blank' };
+  }, [state.mineBoard, state.players, state.themes, state.turn]);
+
+  const chooseMineBombTask = useCallback((choice: MineTaskChoice): TaskEventData | null => {
+    const activePlayer = state.players[state.turn];
+    const opponent = state.players[state.turn === 0 ? 1 : 0];
+
+    if (!activePlayer || !opponent) return null;
+
+    return createMineTaskEvent(state.players, state.themes, activePlayer.id, choice, opponent.id);
   }, [state.players, state.themes, state.turn]);
 
   const movePlayer = useCallback((steps: number) => {
@@ -571,7 +740,13 @@ export function useGameState() {
         );
       }
 
-      if (outcome === 'reject' && task.type !== 'card') {
+      if (
+        outcome === 'reject' &&
+        task.type !== 'card' &&
+        task.type !== 'mineTruth' &&
+        task.type !== 'mineDare' &&
+        task.type !== 'mineTheme'
+      ) {
         const backSteps = Math.floor(Math.random() * 3) + 1;
         nextPlayers = prev.players.map(p => {
           if (p.id !== task.executorPlayerId) return p;
@@ -602,6 +777,7 @@ export function useGameState() {
       players: initialPlayers.map(p => ({ ...p, themeId: null, step: 0 })),
       boardMap: generateBoardMap(),
       pathCoords: generateSpiralPath(),
+      mineBoard: generateMineBoard(),
       isRolling: false
     }));
   }, []);
@@ -619,6 +795,8 @@ export function useGameState() {
     importThemeTasks,
     startGame,
     drawCardTask,
+    revealMineTile,
+    chooseMineBombTask,
     movePlayer,
     endTurn,
     setIsRolling,

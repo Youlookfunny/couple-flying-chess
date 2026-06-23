@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Github } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
-import { TaskEventData } from './types';
+import { MineTaskChoice, TaskEventData } from './types';
 import { HomeView } from './components/views/HomeView';
 import { GameView } from './components/views/GameView';
 import { CardModeView } from './components/views/CardModeView';
+import { MineModeView } from './components/views/MineModeView';
 import { PoseModeView } from './components/views/PoseModeView';
 import { ThemesView } from './components/views/ThemesView';
 import { ThemeSelectorModal } from './components/modals/ThemeSelectorModal';
 import { TaskCardModal } from './components/modals/TaskCardModal';
+import { MineBombChoiceModal } from './components/modals/MineBombChoiceModal';
 import { PoseCardModal } from './components/modals/PoseCardModal';
 import { WinModal } from './components/modals/WinModal';
 import { BottomNav } from './components/BottomNav';
@@ -30,6 +32,8 @@ function App() {
     importThemeTasks,
     startGame,
     drawCardTask,
+    revealMineTile,
+    chooseMineBombTask,
     movePlayer,
     endTurn,
     setIsRolling,
@@ -41,6 +45,7 @@ function App() {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number>(0);
   const [taskData, setTaskData] = useState<TaskEventData | null>(null);
+  const [isMineBombChoiceOpen, setIsMineBombChoiceOpen] = useState(false);
   const [poseImageSrc, setPoseImageSrc] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<number | null>(null);
   const [isCreateThemeModalOpen, setIsCreateThemeModalOpen] = useState(false);
@@ -72,6 +77,23 @@ function App() {
     setTaskData(data);
   };
 
+  const handleMineBombTrigger = () => {
+    setIsMineBombChoiceOpen(true);
+  };
+
+  const handleMineBombChoice = (choice: MineTaskChoice) => {
+    const task = chooseMineBombTask(choice);
+    setIsMineBombChoiceOpen(false);
+
+    if (!task) {
+      alert('当前玩家还没有可抽取的主题任务');
+      endTurn();
+      return;
+    }
+
+    setTaskData(task);
+  };
+
   const handleTaskAccept = () => {
     if (!taskData) return;
     setTaskData(null);
@@ -99,6 +121,8 @@ function App() {
 
   const handleBackFromGame = () => {
     if (confirm('离开游戏？进度不会保存')) {
+      setIsMineBombChoiceOpen(false);
+      setTaskData(null);
       setPoseImageSrc(null);
       resetGame();
       switchView('home');
@@ -190,6 +214,13 @@ function App() {
         onReject={handleTaskReject}
       />
 
+      <MineBombChoiceModal
+        isOpen={isMineBombChoiceOpen}
+        activePlayer={state.players[state.turn] || null}
+        selectorPlayer={state.players[state.turn === 0 ? 1 : 0] || null}
+        onChoose={handleMineBombChoice}
+      />
+
       <PoseCardModal
         isOpen={!!poseImageSrc}
         imageSrc={poseImageSrc}
@@ -264,6 +295,20 @@ function App() {
           currentTurn={state.turn}
           onDrawTask={drawCardTask}
           onTaskTrigger={handleTaskTrigger}
+          onBack={handleBackFromGame}
+        />
+      )}
+
+      {state.view === 'mine' && (
+        <MineModeView
+          players={state.players}
+          themes={state.themes}
+          mineBoard={state.mineBoard}
+          currentTurn={state.turn}
+          onRevealTile={revealMineTile}
+          onTaskTrigger={handleTaskTrigger}
+          onBombTrigger={handleMineBombTrigger}
+          onEndTurn={endTurn}
           onBack={handleBackFromGame}
         />
       )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TaskEventData } from '../../types';
-import { Heart, Lock, HandshakeIcon, Sparkles } from 'lucide-react';
+import { Flame, Heart, Lock, HandshakeIcon, MessageCircleQuestion, Sparkles } from 'lucide-react';
 
 interface TaskCardModalProps {
   isOpen: boolean;
@@ -13,6 +13,8 @@ const iconMap: Record<string, React.ReactNode> = {
   favorite: <Heart size={40} fill="currentColor" />,
   lock: <Lock size={40} />,
   handshake: <HandshakeIcon size={40} />,
+  flame: <Flame size={40} />,
+  'message-question': <MessageCircleQuestion size={40} />,
   sparkles: <Sparkles size={40} />
 };
 
@@ -37,8 +39,12 @@ export function TaskCardModal({ isOpen, taskData, onAccept, onReject }: TaskCard
 
   if (!isOpen || !visibleTaskData) return null;
 
+  const isMineTask =
+    visibleTaskData.type === 'mineTruth' ||
+    visibleTaskData.type === 'mineDare' ||
+    visibleTaskData.type === 'mineTheme';
   const rejectLabel =
-    visibleTaskData.type === 'card'
+    visibleTaskData.type === 'card' || isMineTask
       ? '跳过任务'
       : visibleTaskData.type === 'collision'
         ? '拒绝（回到起点）'
