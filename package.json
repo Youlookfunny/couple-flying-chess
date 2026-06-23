@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
+    "generate:poses": "node scripts/generate-pose-images.mjs",
+    "dev": "npm run generate:poses && vite",
+    "build": "npm run generate:poses && vite build",
+    "lint": "npm run generate:poses && eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "npm run generate:poses && tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
