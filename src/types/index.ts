@@ -4,6 +4,8 @@ export type PlayerRole = 'male' | 'female';
 
 export type GameMode = 'board' | 'card' | 'pose' | 'mine';
 
+export type ThemeMode = 'board' | 'card' | 'mineTruth' | 'mineDare' | 'mineTheme';
+
 export type MineTileType = 'bomb' | 'truth' | 'dare' | 'blank' | 'theme';
 
 export type MineTaskChoice = 'truth' | 'dare' | 'theme';
@@ -37,6 +39,7 @@ export interface Theme {
   name: string;
   desc: string;
   audience: ThemeAudience;
+  modes: ThemeMode[];
   tasks: TaskCard[];
 }
 

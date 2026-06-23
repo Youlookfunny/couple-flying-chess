@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Github } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
-import { MineTaskChoice, TaskEventData } from './types';
+import { MineTaskChoice, TaskEventData, ThemeMode } from './types';
 import { HomeView } from './components/views/HomeView';
 import { GameView } from './components/views/GameView';
 import { CardModeView } from './components/views/CardModeView';
@@ -62,14 +62,22 @@ function App() {
   };
 
   const selectedPlayer = state.players.find(p => p.id === selectedPlayerId) || state.players[0];
+  const selectedModeForTheme: ThemeMode =
+    state.gameMode === 'card' ? 'card' : state.gameMode === 'mine' ? 'mineTheme' : 'board';
   const selectableThemes = state.themes.filter(
-    t => t.audience === 'common' || t.audience === selectedPlayer.role
+    t =>
+      (t.audience === 'common' || t.audience === selectedPlayer.role) &&
+      t.modes.includes(selectedModeForTheme)
   );
 
   const handleStartGame = () => {
     const success = startGame();
     if (!success) {
-      alert('请先为双方选择任务包');
+      if (state.gameMode === 'mine') {
+        alert('请为双方选择支持“扫雷主题”的任务包，并确保题库里有支持“扫雷真心话”和“扫雷大冒险”的主题');
+        return;
+      }
+      alert(state.gameMode === 'card' ? '请先为双方选择支持抽卡的任务包' : '请先为双方选择支持飞行棋的任务包');
     }
   };
 
@@ -86,7 +94,8 @@ function App() {
     setIsMineBombChoiceOpen(false);
 
     if (!task) {
-      alert('当前玩家还没有可抽取的主题任务');
+      const choiceLabel = choice === 'truth' ? '扫雷真心话' : choice === 'dare' ? '扫雷大冒险' : '扫雷主题';
+      alert(`当前没有可抽取的${choiceLabel}题库`);
       endTurn();
       return;
     }

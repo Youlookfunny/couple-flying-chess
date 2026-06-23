@@ -10,7 +10,8 @@ import {
   TaskCard,
   TaskEventData,
   TaskExecutor,
-  Theme
+  Theme,
+  ThemeMode
 } from '../types';
 import { loadFromStorage, saveToStorage } from '../utils/localStorage';
 import { generateSpiralPath, generateBoardMap, calculateNewPosition, generateMineBoard } from '../utils/gameLogic';
@@ -23,34 +24,10 @@ const initialPlayers: Player[] = [
   { id: 1, name: '女方', color: '#FF375F', role: 'female', step: 0, themeId: null }
 ];
 
-const MINE_TRUTH_TASKS: TaskCard[] = [
-  { text: '说出最近一次因为对方心动的具体瞬间', executor: 'both', moveDelta: 0 },
-  { text: '回答：你最希望对方今晚主动做的一件小事是什么？', executor: 'both', moveDelta: 0 },
-  { text: '说出一个你平时不好意思开口表达的需求', executor: 'both', moveDelta: 0 },
-  { text: '回答：对方哪个细节最容易让你失去抵抗力？', executor: 'both', moveDelta: 0 },
-  { text: '说出一件你想和对方一起尝试、但还没说出口的事', executor: 'both', moveDelta: 0 },
-  { text: '回答：如果今晚只能保留一个亲密动作，你会选什么？', executor: 'both', moveDelta: 0 },
-  { text: '说出你最喜欢对方夸你的哪一句话', executor: 'both', moveDelta: 0 },
-  { text: '回答：你希望下一次约会出现在哪个场景里？', executor: 'both', moveDelta: 0 },
-  { text: '说出一个你觉得对方特别可爱的习惯', executor: 'both', moveDelta: 0 },
-  { text: '回答：你最想被对方怎样哄开心？', executor: 'both', moveDelta: 0 }
-];
-
-const MINE_DARE_TASKS: TaskCard[] = [
-  { text: '看着对方眼睛，用认真语气夸对方三个优点', executor: 'both', moveDelta: 0 },
-  { text: '给对方一个不少于20秒的拥抱', executor: 'both', moveDelta: 0 },
-  { text: '用手指在对方掌心写一句暗号，让对方猜', executor: 'both', moveDelta: 0 },
-  { text: '让对方指定一个称呼，并用这个称呼说一句情话', executor: 'both', moveDelta: 0 },
-  { text: '为对方按摩肩颈1分钟', executor: 'both', moveDelta: 0 },
-  { text: '贴近对方耳边，用很轻的声音说一句喜欢', executor: 'both', moveDelta: 0 },
-  { text: '和对方十指紧扣，保持30秒不说话', executor: 'both', moveDelta: 0 },
-  { text: '模仿对方撒娇或害羞的样子', executor: 'both', moveDelta: 0 },
-  { text: '让对方选择一个脸颊或额头亲吻', executor: 'both', moveDelta: 0 },
-  { text: '把下一分钟的主动权交给对方安排', executor: 'both', moveDelta: 0 }
-];
-
 const MINE_BOARD_SIZE = 36;
 const MINE_TILE_TYPES = new Set<MineTileType>(['bomb', 'truth', 'dare', 'blank', 'theme']);
+const THEME_MODES = new Set<ThemeMode>(['board', 'card', 'mineTruth', 'mineDare', 'mineTheme']);
+const DEFAULT_THEME_MODES: ThemeMode[] = ['board', 'card', 'mineTheme'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -58,6 +35,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isThemeAllowedForRole(theme: Theme, role: Player['role']) {
   return theme.audience === 'common' || theme.audience === role;
+}
+
+function isThemeAllowedForMode(theme: Theme, mode: ThemeMode) {
+  return theme.modes.includes(mode);
+}
+
+function isThemeAllowed(theme: Theme, role: Player['role'], mode: ThemeMode) {
+  return isThemeAllowedForRole(theme, role) && isThemeAllowedForMode(theme, mode);
 }
 
 function normalizeExecutor(value: unknown): TaskExecutor {
@@ -137,8 +122,16 @@ function chooseRandomTask(theme: Theme | undefined): TaskCard | null {
   return theme.tasks[Math.floor(Math.random() * theme.tasks.length)];
 }
 
-function chooseRandomTaskFromList(tasks: TaskCard[]): TaskCard {
-  return tasks[Math.floor(Math.random() * tasks.length)];
+function chooseRandomTheme(themes: Theme[], role: Player['role'], mode: ThemeMode): Theme | null {
+  const availableThemes = themes.filter(
+    theme => isThemeAllowed(theme, role, mode) && theme.tasks.length > 0
+  );
+  if (availableThemes.length === 0) return null;
+  return availableThemes[Math.floor(Math.random() * availableThemes.length)];
+}
+
+function hasThemeForMode(themes: Theme[], role: Player['role'], mode: ThemeMode) {
+  return themes.some(theme => isThemeAllowed(theme, role, mode) && theme.tasks.length > 0);
 }
 
 function getExecutorPlayerId(task: TaskCard, fallbackPlayerId: number) {
@@ -220,6 +213,10 @@ function normalizeThemes(input: unknown): Theme[] {
         : [];
 
       const audienceValue = record.audience;
+      const modesValue = record.modes;
+      const modes = Array.isArray(modesValue)
+        ? modesValue.filter((mode): mode is ThemeMode => THEME_MODES.has(mode as ThemeMode))
+        : [];
 
       return {
         id: typeof record.id === 'string' ? record.id : `theme_${Date.now()}`,
@@ -229,6 +226,7 @@ function normalizeThemes(input: unknown): Theme[] {
           audienceValue === 'common' || audienceValue === 'male' || audienceValue === 'female'
             ? audienceValue
             : 'common',
+        modes: modes.length > 0 ? modes : DEFAULT_THEME_MODES,
         tasks
       } satisfies Theme;
     })
@@ -310,14 +308,33 @@ function createThemeId(existingIds: Set<string>) {
 }
 
 function canStartWithThemes(players: Player[], themes: Theme[]) {
+  return canStartWithThemeMode(players, themes, 'board');
+}
+
+function canStartWithThemeMode(players: Player[], themes: Theme[], mode: ThemeMode) {
   for (const player of players) {
     if (!player.themeId) return false;
     const theme = themes.find(t => t.id === player.themeId);
     if (!theme) return false;
-    if (!isThemeAllowedForRole(theme, player.role)) return false;
+    if (!isThemeAllowed(theme, player.role, mode)) return false;
     if (theme.tasks.length === 0) return false;
   }
   return true;
+}
+
+function canStartMineMode(players: Player[], themes: Theme[]) {
+  return (
+    canStartWithThemeMode(players, themes, 'mineTheme') &&
+    players.every(player => hasThemeForMode(themes, player.role, 'mineTruth')) &&
+    players.every(player => hasThemeForMode(themes, player.role, 'mineDare'))
+  );
+}
+
+function canStartGameMode(mode: GameMode, players: Player[], themes: Theme[]) {
+  if (mode === 'pose') return true;
+  if (mode === 'card') return canStartWithThemeMode(players, themes, 'card');
+  if (mode === 'mine') return canStartMineMode(players, themes);
+  return canStartWithThemes(players, themes);
 }
 
 function createRandomTaskEvent(
@@ -329,7 +346,7 @@ function createRandomTaskEvent(
   if (!player?.themeId) return null;
 
   const theme = themes.find(t => t.id === player.themeId);
-  if (!theme || theme.tasks.length === 0) return null;
+  if (!theme || !isThemeAllowed(theme, player.role, 'card') || theme.tasks.length === 0) return null;
   const task = chooseRandomTask(theme);
 
   if (!task) return null;
@@ -359,6 +376,14 @@ function createMineTaskEvent(
   if (!player) return null;
 
   const selectedPrefix = selector ? `${selector.name}指定` : '扫雷事件';
+  const mode: ThemeMode =
+    choice === 'truth' ? 'mineTruth' : choice === 'dare' ? 'mineDare' : 'mineTheme';
+  const theme =
+    choice === 'theme' && player.themeId
+      ? themes.find(t => t.id === player.themeId && isThemeAllowed(t, player.role, 'mineTheme')) || null
+      : chooseRandomTheme(themes, player.role, mode);
+  const task = chooseRandomTask(theme || undefined);
+  if (!theme || !task) return null;
 
   if (choice === 'truth') {
     return buildTaskEvent({
@@ -369,8 +394,8 @@ function createMineTaskEvent(
       subtitle: selectedPrefix,
       icon: 'message-question',
       color: 'text-[#64D2FF]',
-      task: chooseRandomTaskFromList(MINE_TRUTH_TASKS),
-      taskSourceId: 'mine_truth'
+      task: { ...task, moveDelta: 0 },
+      taskSourceId: theme.id
     });
   }
 
@@ -383,15 +408,10 @@ function createMineTaskEvent(
       subtitle: selectedPrefix,
       icon: 'flame',
       color: 'text-[#FF9F0A]',
-      task: chooseRandomTaskFromList(MINE_DARE_TASKS),
-      taskSourceId: 'mine_dare'
+      task: { ...task, moveDelta: 0 },
+      taskSourceId: theme.id
     });
   }
-
-  if (!player.themeId) return null;
-  const theme = themes.find(t => t.id === player.themeId);
-  const task = chooseRandomTask(theme);
-  if (!task) return null;
 
   return buildTaskEvent({
     type: 'mineTheme',
@@ -402,7 +422,7 @@ function createMineTaskEvent(
     icon: 'sparkles',
     color: player.role === 'male' ? 'text-[#0A84FF]' : 'text-[#FF375F]',
     task: { ...task, moveDelta: 0 },
-    taskSourceId: player.themeId
+    taskSourceId: theme.id
   });
 }
 
@@ -437,7 +457,14 @@ export function useGameState() {
   }, []);
 
   const selectGameMode = useCallback((mode: GameMode) => {
-    setState(prev => ({ ...prev, gameMode: mode }));
+    setState(prev => ({
+      ...prev,
+      gameMode: mode,
+      players:
+        mode === prev.gameMode
+          ? prev.players
+          : prev.players.map(player => ({ ...player, themeId: null }))
+    }));
   }, []);
 
   const selectTheme = useCallback((playerId: number, themeId: string) => {
@@ -449,7 +476,12 @@ export function useGameState() {
     }));
   }, []);
 
-  const createTheme = useCallback((input: { name: string; desc?: string; audience: Theme['audience'] }) => {
+  const createTheme = useCallback((input: {
+    name: string;
+    desc?: string;
+    audience: Theme['audience'];
+    modes: ThemeMode[];
+  }) => {
     const name = input.name.trim();
     const desc = (input.desc || '').trim();
     if (!name) return null;
@@ -469,6 +501,7 @@ export function useGameState() {
             name,
             desc,
             audience: input.audience,
+            modes: input.modes.length > 0 ? input.modes : DEFAULT_THEME_MODES,
             tasks: []
           }
         ]
@@ -478,7 +511,7 @@ export function useGameState() {
     return createdId;
   }, []);
 
-  const updateThemeMeta = useCallback((themeId: string, patch: Partial<Pick<Theme, 'name' | 'desc' | 'audience'>>) => {
+  const updateThemeMeta = useCallback((themeId: string, patch: Partial<Pick<Theme, 'name' | 'desc' | 'audience' | 'modes'>>) => {
     setState(prev => ({
       ...prev,
       themes: prev.themes.map(t => {
@@ -486,12 +519,14 @@ export function useGameState() {
         const nextName = typeof patch.name === 'string' ? patch.name.trim() : t.name;
         const nextDesc = typeof patch.desc === 'string' ? patch.desc.trim() : t.desc;
         const nextAudience = patch.audience || t.audience;
+        const nextModes = patch.modes && patch.modes.length > 0 ? patch.modes : t.modes;
 
         return {
           ...t,
           name: nextName || t.name,
           desc: nextDesc,
-          audience: nextAudience
+          audience: nextAudience,
+          modes: nextModes
         };
       })
     }));
@@ -577,7 +612,7 @@ export function useGameState() {
   }, []);
 
   const startGame = useCallback(() => {
-    if (state.gameMode !== 'pose' && !canStartWithThemes(state.players, state.themes)) return false;
+    if (!canStartGameMode(state.gameMode, state.players, state.themes)) return false;
 
     setState(prev => ({
       ...prev,

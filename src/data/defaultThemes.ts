@@ -1,6 +1,49 @@
-import { Theme } from '../types';
+import { Theme, ThemeMode } from '../types';
 
-export const DEFAULT_THEMES: Theme[] = [
+const DEFAULT_THEME_MODES: ThemeMode[] = ['board', 'card', 'mineTheme'];
+
+const MINE_MODE_THEMES: Theme[] = [
+  {
+    id: 'mine_truth_default',
+    name: '扫雷真心话',
+    desc: '扫雷模式专用真心话题库',
+    audience: 'common',
+    modes: ['mineTruth'],
+    tasks: [
+      { text: '说出最近一次因为对方心动的具体瞬间', executor: 'both', moveDelta: 0 },
+      { text: '回答：你最希望对方今晚主动做的一件小事是什么？', executor: 'both', moveDelta: 0 },
+      { text: '说出一个你平时不好意思开口表达的需求', executor: 'both', moveDelta: 0 },
+      { text: '回答：对方哪个细节最容易让你失去抵抗力？', executor: 'both', moveDelta: 0 },
+      { text: '说出一件你想和对方一起尝试、但还没说出口的事', executor: 'both', moveDelta: 0 },
+      { text: '回答：如果今晚只能保留一个亲密动作，你会选什么？', executor: 'both', moveDelta: 0 },
+      { text: '说出你最喜欢对方夸你的哪一句话', executor: 'both', moveDelta: 0 },
+      { text: '回答：你希望下一次约会出现在哪个场景里？', executor: 'both', moveDelta: 0 },
+      { text: '说出一个你觉得对方特别可爱的习惯', executor: 'both', moveDelta: 0 },
+      { text: '回答：你最想被对方怎样哄开心？', executor: 'both', moveDelta: 0 }
+    ]
+  },
+  {
+    id: 'mine_dare_default',
+    name: '扫雷大冒险',
+    desc: '扫雷模式专用大冒险题库',
+    audience: 'common',
+    modes: ['mineDare'],
+    tasks: [
+      { text: '看着对方眼睛，用认真语气夸对方三个优点', executor: 'both', moveDelta: 0 },
+      { text: '给对方一个不少于20秒的拥抱', executor: 'both', moveDelta: 0 },
+      { text: '用手指在对方掌心写一句暗号，让对方猜', executor: 'both', moveDelta: 0 },
+      { text: '让对方指定一个称呼，并用这个称呼说一句情话', executor: 'both', moveDelta: 0 },
+      { text: '为对方按摩肩颈1分钟', executor: 'both', moveDelta: 0 },
+      { text: '贴近对方耳边，用很轻的声音说一句喜欢', executor: 'both', moveDelta: 0 },
+      { text: '和对方十指紧扣，保持30秒不说话', executor: 'both', moveDelta: 0 },
+      { text: '模仿对方撒娇或害羞的样子', executor: 'both', moveDelta: 0 },
+      { text: '让对方选择一个脸颊或额头亲吻', executor: 'both', moveDelta: 0 },
+      { text: '把下一分钟的主动权交给对方安排', executor: 'both', moveDelta: 0 }
+    ]
+  }
+];
+
+const DEFAULT_THEME_SEEDS: Array<Omit<Theme, 'modes'> & { modes?: ThemeMode[] }> = [
   {
     "id": "sweet",
     "name": "甜蜜日常",
@@ -7051,3 +7094,12 @@ export const DEFAULT_THEMES: Theme[] = [
     ]
   }
 ];
+
+export const DEFAULT_THEMES: Theme[] = [
+  ...MINE_MODE_THEMES,
+  ...DEFAULT_THEME_SEEDS.map(theme => ({
+    ...theme,
+    modes: theme.modes || DEFAULT_THEME_MODES
+  }))
+];
+

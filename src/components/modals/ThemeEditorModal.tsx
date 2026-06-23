@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, Wand2 } from 'lucide-react';
-import { TaskExecutor, Theme } from '../../types';
+import { TaskExecutor, Theme, ThemeMode } from '../../types';
 
 interface ThemeEditorModalProps {
   isOpen: boolean;
   theme: Theme | null;
   onClose: () => void;
-  onSaveMeta: (themeId: string, patch: Partial<Pick<Theme, 'name' | 'desc' | 'audience'>>) => void;
+  onSaveMeta: (themeId: string, patch: Partial<Pick<Theme, 'name' | 'desc' | 'audience' | 'modes'>>) => void;
   onAddTask: (themeId: string, taskText: string) => void;
   onUpdateTask: (themeId: string, index: number, patch: Partial<Theme['tasks'][number]>) => void;
   onRemoveTask: (themeId: string, index: number) => void;
@@ -25,6 +25,14 @@ const taskExecutorOptions: Array<{ value: TaskExecutor; label: string }> = [
   { value: 'both', label: '通' }
 ];
 
+const modeOptions: Array<{ value: ThemeMode; label: string }> = [
+  { value: 'board', label: '飞行棋' },
+  { value: 'card', label: '抽卡' },
+  { value: 'mineTruth', label: '扫雷真心话' },
+  { value: 'mineDare', label: '扫雷大冒险' },
+  { value: 'mineTheme', label: '扫雷主题' }
+];
+
 export function ThemeEditorModal({
   isOpen,
   theme,
@@ -38,6 +46,7 @@ export function ThemeEditorModal({
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [audience, setAudience] = useState<Theme['audience']>('common');
+  const [modes, setModes] = useState<ThemeMode[]>([]);
   const [taskText, setTaskText] = useState('');
 
   useEffect(() => {
@@ -45,6 +54,7 @@ export function ThemeEditorModal({
     setName(theme.name);
     setDesc(theme.desc);
     setAudience(theme.audience);
+    setModes(theme.modes);
     setTaskText('');
   }, [isOpen, theme]);
 
@@ -59,7 +69,11 @@ export function ThemeEditorModal({
     };
   }, [isOpen]);
 
-  const canSave = useMemo(() => name.trim().length > 0, [name]);
+  const canSave = useMemo(() => name.trim().length > 0 && modes.length > 0, [name, modes.length]);
+
+  const toggleMode = (mode: ThemeMode) => {
+    setModes(prev => (prev.includes(mode) ? prev.filter(item => item !== mode) : [...prev, mode]));
+  };
 
   if (!isOpen || !theme) return null;
 
@@ -74,7 +88,7 @@ export function ThemeEditorModal({
             className="h-9 px-4 rounded-full bg-white text-black text-sm font-semibold ios-btn disabled:opacity-40"
             disabled={!canSave}
             onClick={() => {
-              onSaveMeta(theme.id, { name: name.trim(), desc: desc.trim(), audience });
+              onSaveMeta(theme.id, { name: name.trim(), desc: desc.trim(), audience, modes });
               onClose();
             }}
           >
@@ -119,6 +133,30 @@ export function ThemeEditorModal({
                   {opt.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs text-gray-400">适用模式</div>
+            <div className="grid grid-cols-2 gap-2">
+              {modeOptions.map(opt => {
+                const isActive = modes.includes(opt.value);
+
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`h-10 rounded-xl text-sm font-semibold ios-btn border ${
+                      isActive
+                        ? 'bg-white text-black border-white'
+                        : 'bg-[#2C2C2E] text-gray-200 border-white/5'
+                    }`}
+                    onClick={() => toggleMode(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

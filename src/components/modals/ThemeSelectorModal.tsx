@@ -42,6 +42,11 @@ export function ThemeSelectorModal({
           <h3 className="text-xl font-bold text-white">选择主题</h3>
         </div>
         <div className="space-y-2 max-h-[50vh] overflow-y-auto no-scrollbar pb-8">
+          {themes.length === 0 && (
+            <div className="text-sm text-gray-500 bg-[#2C2C2E] rounded-xl p-4 border border-white/5">
+              当前没有可选主题，请到题库中新建或编辑主题的适用模式
+            </div>
+          )}
           {themes.map(theme => (
             <div
               key={theme.id}

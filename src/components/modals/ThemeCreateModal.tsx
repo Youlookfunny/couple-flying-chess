@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Theme } from '../../types';
+import { Theme, ThemeMode } from '../../types';
 
 interface ThemeCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (input: { name: string; desc: string; audience: Theme['audience'] }) => void;
+  onCreate: (input: { name: string; desc: string; audience: Theme['audience']; modes: ThemeMode[] }) => void;
 }
 
 const audienceOptions: Array<{ value: Theme['audience']; label: string }> = [
@@ -13,10 +13,21 @@ const audienceOptions: Array<{ value: Theme['audience']; label: string }> = [
   { value: 'female', label: '仅限女方' }
 ];
 
+const modeOptions: Array<{ value: ThemeMode; label: string }> = [
+  { value: 'board', label: '飞行棋' },
+  { value: 'card', label: '抽卡' },
+  { value: 'mineTruth', label: '扫雷真心话' },
+  { value: 'mineDare', label: '扫雷大冒险' },
+  { value: 'mineTheme', label: '扫雷主题' }
+];
+
+const defaultModes: ThemeMode[] = ['board', 'card', 'mineTheme'];
+
 export function ThemeCreateModal({ isOpen, onClose, onCreate }: ThemeCreateModalProps) {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [audience, setAudience] = useState<Theme['audience']>('common');
+  const [modes, setModes] = useState<ThemeMode[]>(defaultModes);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
@@ -24,6 +35,7 @@ export function ThemeCreateModal({ isOpen, onClose, onCreate }: ThemeCreateModal
     setName('');
     setDesc('');
     setAudience('common');
+    setModes(defaultModes);
     setError('');
   }, [isOpen]);
 
@@ -38,7 +50,11 @@ export function ThemeCreateModal({ isOpen, onClose, onCreate }: ThemeCreateModal
     };
   }, [isOpen]);
 
-  const canSubmit = useMemo(() => name.trim().length > 0, [name]);
+  const canSubmit = useMemo(() => name.trim().length > 0 && modes.length > 0, [name, modes.length]);
+
+  const toggleMode = (mode: ThemeMode) => {
+    setModes(prev => (prev.includes(mode) ? prev.filter(item => item !== mode) : [...prev, mode]));
+  };
 
   if (!isOpen) return null;
 
@@ -51,7 +67,7 @@ export function ThemeCreateModal({ isOpen, onClose, onCreate }: ThemeCreateModal
           <h3 className="text-xl font-bold text-white">新建主题</h3>
         </div>
 
-        <div className="space-y-4 pb-8">
+        <div className="space-y-4 max-h-[72vh] overflow-y-auto no-scrollbar pb-8">
           <div className="space-y-2">
             <div className="text-xs text-gray-400">主题名称</div>
             <input
@@ -93,6 +109,30 @@ export function ThemeCreateModal({ isOpen, onClose, onCreate }: ThemeCreateModal
             </div>
           </div>
 
+          <div className="space-y-2">
+            <div className="text-xs text-gray-400">适用模式</div>
+            <div className="grid grid-cols-2 gap-2">
+              {modeOptions.map(opt => {
+                const isActive = modes.includes(opt.value);
+
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`h-10 rounded-xl text-sm font-semibold ios-btn border ${
+                      isActive
+                        ? 'bg-white text-black border-white'
+                        : 'bg-[#2C2C2E] text-gray-200 border-white/5'
+                    }`}
+                    onClick={() => toggleMode(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {error && <div className="text-sm text-[#FF453A]">{error}</div>}
 
           <div className="flex gap-3 pt-2">
@@ -110,7 +150,11 @@ export function ThemeCreateModal({ isOpen, onClose, onCreate }: ThemeCreateModal
                   setError('请输入主题名称');
                   return;
                 }
-                onCreate({ name: name.trim(), desc: desc.trim(), audience });
+                if (modes.length === 0) {
+                  setError('请至少选择一个适用模式');
+                  return;
+                }
+                onCreate({ name: name.trim(), desc: desc.trim(), audience, modes });
               }}
             >
               创建并编辑

@@ -54,6 +54,12 @@ export function HomeView({
   onStartGame
 }: HomeViewProps) {
   const shouldShowThemeSelectors = gameMode !== 'pose';
+  const themeHint =
+    gameMode === 'card'
+      ? '选择游戏模式和双方抽卡题库'
+      : gameMode === 'mine'
+        ? '选择游戏模式和双方扫雷主题题库'
+        : '选择游戏模式和双方任务主题包';
   const modeScrollerRef = useRef<HTMLDivElement>(null);
   const dragStartXRef = useRef(0);
   const dragStartScrollLeftRef = useRef(0);
@@ -136,7 +142,7 @@ export function HomeView({
         <div className="text-center mb-4">
           <h2 className="text-xl text-gray-300 font-medium">配置游戏角色</h2>
           <p className="text-sm text-gray-500 mt-2">
-            {shouldShowThemeSelectors ? '选择游戏模式和双方任务主题包' : '选择游戏模式即可开始'}
+            {shouldShowThemeSelectors ? themeHint : '选择游戏模式即可开始'}
           </p>
         </div>
 
