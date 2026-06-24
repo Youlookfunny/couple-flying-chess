@@ -67,6 +67,34 @@ export function HomeView({
   const [isDraggingMode, setIsDraggingMode] = useState(false);
   const [modeScrollHint, setModeScrollHint] = useState({ left: false, right: false });
 
+  const scrollModeCardIntoView = (modeId: GameMode) => {
+    const scroller = modeScrollerRef.current;
+    const card = scroller?.querySelector<HTMLElement>(`[data-mode-id="${modeId}"]`);
+
+    card?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'nearest'
+    });
+  };
+
+  const handleModeArrowClick = (direction: -1 | 1) => {
+    const currentModeIndex = gameModes.findIndex(mode => mode.id === gameMode);
+    const nextMode = gameModes[currentModeIndex + direction];
+
+    if (nextMode) {
+      onSelectMode(nextMode.id);
+      scrollModeCardIntoView(nextMode.id);
+      return;
+    }
+
+    const scroller = modeScrollerRef.current;
+    scroller?.scrollBy({
+      left: direction * Math.max(scroller.clientWidth * 0.75, 120),
+      behavior: 'smooth'
+    });
+  };
+
   const handleModeMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     const scroller = modeScrollerRef.current;
@@ -165,6 +193,7 @@ export function HomeView({
                 return (
                   <button
                     key={mode.id}
+                    data-mode-id={mode.id}
                     type="button"
                     className={`min-h-[108px] basis-[calc((100%_-_0.75rem)/2)] min-w-[168px] shrink-0 snap-start rounded-[20px] border p-4 text-left transition-all ios-btn ${
                       isActive
@@ -200,18 +229,32 @@ export function HomeView({
               modeScrollHint.left ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg">
+            <button
+              type="button"
+              aria-label="选择上一个模式"
+              className={`w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg ios-btn ${
+                modeScrollHint.left ? 'pointer-events-auto' : 'pointer-events-none'
+              }`}
+              onClick={() => handleModeArrowClick(-1)}
+            >
               <ChevronLeft size={18} />
-            </div>
+            </button>
           </div>
           <div
             className={`pointer-events-none absolute right-[-2px] top-0 bottom-1 w-16 flex items-center justify-end pr-1 bg-gradient-to-l from-black via-black/80 to-transparent transition-opacity duration-300 ${
               modeScrollHint.right ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg">
+            <button
+              type="button"
+              aria-label="选择下一个模式"
+              className={`w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg ios-btn ${
+                modeScrollHint.right ? 'pointer-events-auto' : 'pointer-events-none'
+              }`}
+              onClick={() => handleModeArrowClick(1)}
+            >
               <ChevronRight size={18} />
-            </div>
+            </button>
           </div>
         </div>
 
