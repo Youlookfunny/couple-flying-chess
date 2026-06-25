@@ -224,38 +224,34 @@ export function HomeView({
               })}
             </div>
           </div>
-          <div
-            className={`pointer-events-none absolute left-[-2px] top-0 bottom-1 w-16 flex items-center justify-start pl-1 bg-gradient-to-r from-black via-black/80 to-transparent transition-opacity duration-300 ${
-              modeScrollHint.left ? 'opacity-100' : 'opacity-0'
+          <button
+            type="button"
+            aria-label="选择上一个模式"
+            tabIndex={modeScrollHint.left ? 0 : -1}
+            className={`absolute left-[-2px] top-0 bottom-1 w-16 flex items-center justify-start pl-1 bg-gradient-to-r from-black via-black/80 to-transparent transition-opacity duration-300 ${
+              modeScrollHint.left ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
             }`}
+            onPointerDown={event => event.stopPropagation()}
+            onClick={() => handleModeArrowClick(-1)}
           >
-            <button
-              type="button"
-              aria-label="选择上一个模式"
-              className={`w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg ios-btn ${
-                modeScrollHint.left ? 'pointer-events-auto' : 'pointer-events-none'
-              }`}
-              onClick={() => handleModeArrowClick(-1)}
-            >
+            <span className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg ios-btn">
               <ChevronLeft size={18} />
-            </button>
-          </div>
-          <div
-            className={`pointer-events-none absolute right-[-2px] top-0 bottom-1 w-16 flex items-center justify-end pr-1 bg-gradient-to-l from-black via-black/80 to-transparent transition-opacity duration-300 ${
-              modeScrollHint.right ? 'opacity-100' : 'opacity-0'
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label="选择下一个模式"
+            tabIndex={modeScrollHint.right ? 0 : -1}
+            className={`absolute right-[-2px] top-0 bottom-1 w-16 flex items-center justify-end pr-1 bg-gradient-to-l from-black via-black/80 to-transparent transition-opacity duration-300 ${
+              modeScrollHint.right ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
             }`}
+            onPointerDown={event => event.stopPropagation()}
+            onClick={() => handleModeArrowClick(1)}
           >
-            <button
-              type="button"
-              aria-label="选择下一个模式"
-              className={`w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg ios-btn ${
-                modeScrollHint.right ? 'pointer-events-auto' : 'pointer-events-none'
-              }`}
-              onClick={() => handleModeArrowClick(1)}
-            >
+            <span className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 shadow-lg ios-btn">
               <ChevronRight size={18} />
-            </button>
-          </div>
+            </span>
+          </button>
         </div>
 
         {shouldShowThemeSelectors && (
