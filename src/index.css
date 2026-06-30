@@ -155,12 +155,85 @@ body {
   animation: spin 0.6s linear infinite;
 }
 
+.word-dice-scene {
+  width: 76px;
+  height: 76px;
+  perspective: 720px;
+}
+
+.word-dice {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(-38px);
+  transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.word-dice__face {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  background: linear-gradient(145deg, #f7f7fb, #d8d8e0);
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 16px;
+  color: #111114;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 800;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.08), 0 18px 35px rgba(0, 0, 0, 0.25);
+  overflow-wrap: anywhere;
+}
+
+.word-dice__face--front {
+  transform: rotateY(0deg) translateZ(38px);
+}
+
+.word-dice__face--right {
+  transform: rotateY(90deg) translateZ(38px);
+}
+
+.word-dice__face--back {
+  transform: rotateY(180deg) translateZ(38px);
+}
+
+.word-dice__face--left {
+  transform: rotateY(-90deg) translateZ(38px);
+}
+
+.word-dice__face--top {
+  transform: rotateX(90deg) translateZ(38px);
+}
+
+.word-dice__face--bottom {
+  transform: rotateX(-90deg) translateZ(38px);
+}
+
+.word-dice--rolling {
+  animation: word-dice-spin 0.55s linear infinite;
+}
+
 @keyframes spin {
   0% {
     transform: translateZ(-40px) rotateX(0) rotateY(0);
   }
   100% {
     transform: translateZ(-40px) rotateX(360deg) rotateY(720deg);
+  }
+}
+
+@keyframes word-dice-spin {
+  0% {
+    transform: translateZ(-38px) rotateX(0) rotateY(0) rotateZ(0);
+  }
+  100% {
+    transform: translateZ(-38px) rotateX(360deg) rotateY(720deg) rotateZ(180deg);
   }
 }
 

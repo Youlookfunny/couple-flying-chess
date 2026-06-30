@@ -18,6 +18,7 @@ import { generateSpiralPath, generateBoardMap, calculateNewPosition, generateMin
 import { DEFAULT_THEMES } from '../data/defaultThemes';
 
 const STORAGE_KEY = 'couples-ludo-game-state';
+const DEFAULT_THEME_IDS = new Set(DEFAULT_THEMES.map(theme => theme.id));
 
 const initialPlayers: Player[] = [
   { id: 0, name: '男方', color: '#0A84FF', role: 'male', step: 0, themeId: null },
@@ -26,7 +27,15 @@ const initialPlayers: Player[] = [
 
 const MINE_BOARD_SIZE = 36;
 const MINE_TILE_TYPES = new Set<MineTileType>(['bomb', 'truth', 'dare', 'blank', 'theme']);
-const THEME_MODES = new Set<ThemeMode>(['board', 'card', 'mineTruth', 'mineDare', 'mineTheme']);
+const THEME_MODES = new Set<ThemeMode>([
+  'board',
+  'card',
+  'mineTruth',
+  'mineDare',
+  'mineTheme',
+  'diceAction',
+  'diceBody'
+]);
 const DEFAULT_THEME_MODES: ThemeMode[] = ['board', 'card', 'mineTheme'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -218,8 +227,12 @@ function normalizeThemes(input: unknown): Theme[] {
         ? modesValue.filter((mode): mode is ThemeMode => THEME_MODES.has(mode as ThemeMode))
         : [];
 
+      const id = typeof record.id === 'string' ? record.id : `theme_${Date.now()}`;
+      const defaultTheme = DEFAULT_THEMES.find(theme => theme.id === id);
+      if (defaultTheme) return defaultTheme;
+
       return {
-        id: typeof record.id === 'string' ? record.id : `theme_${Date.now()}`,
+        id,
         name: typeof record.name === 'string' ? record.name : '未命名主题',
         desc: typeof record.desc === 'string' ? record.desc : '',
         audience:
@@ -231,7 +244,12 @@ function normalizeThemes(input: unknown): Theme[] {
       } satisfies Theme;
     })
     .reduce<Theme[]>((acc, theme) => {
-      if (acc.some(t => t.id === theme.id)) return acc;
+      if (acc.some(t => t.id === theme.id)) {
+        if (DEFAULT_THEME_IDS.has(theme.id)) {
+          return acc.map(item => (item.id === theme.id ? theme : item));
+        }
+        return acc;
+      }
       acc.push(theme);
       return acc;
     }, []);
@@ -273,11 +291,14 @@ function normalizeGameState(saved: unknown): GameState | null {
       s.view === 'card' ||
       s.view === 'pose' ||
       s.view === 'mine' ||
+      s.view === 'dice' ||
       s.view === 'themes'
         ? s.view
         : 'home',
     gameMode:
-      s.gameMode === 'pose' || s.view === 'pose'
+      s.gameMode === 'dice' || s.view === 'dice'
+        ? 'dice'
+        : s.gameMode === 'pose' || s.view === 'pose'
         ? 'pose'
         : s.gameMode === 'card' || s.view === 'card'
           ? 'card'
@@ -330,10 +351,33 @@ function canStartMineMode(players: Player[], themes: Theme[]) {
   );
 }
 
+function canStartDiceMode(players: Player[], themes: Theme[]) {
+  const actionSlot = players[0];
+  const bodySlot = players[1];
+  const actionTheme = actionSlot?.themeId
+    ? themes.find(theme => theme.id === actionSlot.themeId)
+    : undefined;
+  const bodyTheme = bodySlot?.themeId
+    ? themes.find(theme => theme.id === bodySlot.themeId)
+    : undefined;
+
+  return !!(
+    actionSlot &&
+    bodySlot &&
+    actionTheme &&
+    bodyTheme &&
+    isThemeAllowed(actionTheme, actionSlot.role, 'diceAction') &&
+    isThemeAllowed(bodyTheme, bodySlot.role, 'diceBody') &&
+    actionTheme.tasks.length > 0 &&
+    bodyTheme.tasks.length > 0
+  );
+}
+
 function canStartGameMode(mode: GameMode, players: Player[], themes: Theme[]) {
   if (mode === 'pose') return true;
   if (mode === 'card') return canStartWithThemeMode(players, themes, 'card');
   if (mode === 'mine') return canStartMineMode(players, themes);
+  if (mode === 'dice') return canStartDiceMode(players, themes);
   return canStartWithThemes(players, themes);
 }
 
@@ -617,7 +661,9 @@ export function useGameState() {
     setState(prev => ({
       ...prev,
       view:
-        prev.gameMode === 'pose'
+        prev.gameMode === 'dice'
+          ? 'dice'
+          : prev.gameMode === 'pose'
           ? 'pose'
           : prev.gameMode === 'card'
             ? 'card'

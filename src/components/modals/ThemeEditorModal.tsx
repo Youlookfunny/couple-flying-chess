@@ -30,7 +30,9 @@ const modeOptions: Array<{ value: ThemeMode; label: string }> = [
   { value: 'card', label: '抽卡' },
   { value: 'mineTruth', label: '扫雷真心话' },
   { value: 'mineDare', label: '扫雷大冒险' },
-  { value: 'mineTheme', label: '扫雷主题' }
+  { value: 'mineTheme', label: '扫雷主题' },
+  { value: 'diceAction', label: '上骰子动作' },
+  { value: 'diceBody', label: '下骰子部位' }
 ];
 
 export function ThemeEditorModal({

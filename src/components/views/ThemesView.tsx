@@ -17,7 +17,9 @@ const modeLabel: Record<Theme['modes'][number], string> = {
   card: '抽卡',
   mineTruth: '真心话',
   mineDare: '大冒险',
-  mineTheme: '扫雷主题'
+  mineTheme: '扫雷主题',
+  diceAction: '上骰子动作',
+  diceBody: '下骰子部位'
 };
 
 export function ThemesView({ themes, onCreateTheme, onEditTheme }: ThemesViewProps) {

@@ -7,6 +7,7 @@ import { GameView } from './components/views/GameView';
 import { CardModeView } from './components/views/CardModeView';
 import { MineModeView } from './components/views/MineModeView';
 import { PoseModeView } from './components/views/PoseModeView';
+import { DiceModeView } from './components/views/DiceModeView';
 import { ThemesView } from './components/views/ThemesView';
 import { ThemeSelectorModal } from './components/modals/ThemeSelectorModal';
 import { TaskCardModal } from './components/modals/TaskCardModal';
@@ -63,10 +64,18 @@ function App() {
 
   const selectedPlayer = state.players.find(p => p.id === selectedPlayerId) || state.players[0];
   const selectedModeForTheme: ThemeMode =
-    state.gameMode === 'card' ? 'card' : state.gameMode === 'mine' ? 'mineTheme' : 'board';
+    state.gameMode === 'dice'
+      ? selectedPlayerId === 0
+        ? 'diceAction'
+        : 'diceBody'
+      : state.gameMode === 'card'
+        ? 'card'
+        : state.gameMode === 'mine'
+          ? 'mineTheme'
+          : 'board';
   const selectableThemes = state.themes.filter(
     t =>
-      (t.audience === 'common' || t.audience === selectedPlayer.role) &&
+      (state.gameMode === 'dice' || t.audience === 'common' || t.audience === selectedPlayer.role) &&
       t.modes.includes(selectedModeForTheme)
   );
 
@@ -75,6 +84,10 @@ function App() {
     if (!success) {
       if (state.gameMode === 'mine') {
         alert('请为双方选择支持“扫雷主题”的任务包，并确保题库里有支持“扫雷真心话”和“扫雷大冒险”的主题');
+        return;
+      }
+      if (state.gameMode === 'dice') {
+        alert('请先选择支持“上骰子动作”和“下骰子部位”的主题包');
         return;
       }
       alert(state.gameMode === 'card' ? '请先为双方选择支持抽卡的任务包' : '请先为双方选择支持飞行棋的任务包');
@@ -164,10 +177,10 @@ function App() {
               <Github size={24} />
             </a>
             <a
-              href="mailto:ikun@gmx.cn"
+              href="mailto:laiwozhe9527@gmail.com"
               className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
             >
-              问题反馈：ikun@gmx.cn
+              问题反馈：laiwozhe9527@gmail.com
             </a>
           </div>
         </header>
@@ -327,6 +340,16 @@ function App() {
           players={state.players}
           currentTurn={state.turn}
           onPoseTrigger={setPoseImageSrc}
+          onBack={handleBackFromGame}
+        />
+      )}
+
+      {state.view === 'dice' && (
+        <DiceModeView
+          players={state.players}
+          themes={state.themes}
+          currentTurn={state.turn}
+          onEndTurn={endTurn}
           onBack={handleBackFromGame}
         />
       )}

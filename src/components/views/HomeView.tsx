@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameMode, Player, Theme } from '../../types';
-import { Bomb, ChevronLeft, ChevronRight, Dice5, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
+import { Bomb, ChevronLeft, ChevronRight, Dice5, Dices, ImageIcon, Layers3, User, UserRound } from 'lucide-react';
 
 interface HomeViewProps {
   players: Player[];
@@ -36,6 +36,12 @@ const gameModes: Array<{
     icon: Bomb
   },
   {
+    id: 'dice',
+    title: '亲密骰子模式',
+    desc: '上下骰子组合动作与部位',
+    icon: Dices
+  },
+  {
     id: 'pose',
     title: '姿势模式',
     desc: '轮流抽取姿势图片',
@@ -55,7 +61,9 @@ export function HomeView({
 }: HomeViewProps) {
   const shouldShowThemeSelectors = gameMode !== 'pose';
   const themeHint =
-    gameMode === 'card'
+    gameMode === 'dice'
+      ? '选择上骰子动作主题和下骰子部位主题'
+      : gameMode === 'card'
       ? '选择游戏模式和双方抽卡题库'
       : gameMode === 'mine'
         ? '选择游戏模式和双方扫雷主题题库'
@@ -259,6 +267,19 @@ export function HomeView({
           {players.map((player, idx) => {
             const theme = themes.find(t => t.id === player.themeId);
             const isMale = idx === 0;
+            const selectorName =
+              gameMode === 'dice'
+                ? idx === 0
+                  ? '上骰子'
+                  : '下骰子'
+                : `${player.name} (Player ${player.id + 1})`;
+            const selectedThemeLabel =
+              theme?.name ||
+              (gameMode === 'dice'
+                ? idx === 0
+                  ? '未选择动作主题'
+                  : '未选择部位主题'
+                : '未选择主题');
 
             return (
               <div
@@ -282,10 +303,10 @@ export function HomeView({
                   </div>
                   <div>
                     <div className="text-base font-semibold text-white">
-                      {player.name} (Player {player.id + 1})
+                      {selectorName}
                     </div>
                     <div className="text-sm font-medium text-white mt-0.5">
-                      {theme?.name || '未选择主题'}
+                      {selectedThemeLabel}
                     </div>
                   </div>
                 </div>
@@ -308,9 +329,11 @@ export function HomeView({
               ? '开始抽卡'
               : gameMode === 'pose'
                 ? '开始抽姿势'
-                : gameMode === 'mine'
-                  ? '开始扫雷'
-                  : '开始游戏'}
+                : gameMode === 'dice'
+                  ? '开始骰子'
+                  : gameMode === 'mine'
+                    ? '开始扫雷'
+                    : '开始游戏'}
           </span>
           <ChevronRight size={20} />
         </button>

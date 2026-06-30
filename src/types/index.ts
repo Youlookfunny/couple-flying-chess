@@ -2,9 +2,16 @@ export type TileType = 'blank' | 'lucky' | 'trap';
 
 export type PlayerRole = 'male' | 'female';
 
-export type GameMode = 'board' | 'card' | 'pose' | 'mine';
+export type GameMode = 'board' | 'card' | 'pose' | 'mine' | 'dice';
 
-export type ThemeMode = 'board' | 'card' | 'mineTruth' | 'mineDare' | 'mineTheme';
+export type ThemeMode =
+  | 'board'
+  | 'card'
+  | 'mineTruth'
+  | 'mineDare'
+  | 'mineTheme'
+  | 'diceAction'
+  | 'diceBody';
 
 export type MineTileType = 'bomb' | 'truth' | 'dare' | 'blank' | 'theme';
 
@@ -49,7 +56,7 @@ export interface PathCoord {
 }
 
 export interface GameState {
-  view: 'home' | 'game' | 'card' | 'pose' | 'mine' | 'themes';
+  view: 'home' | 'game' | 'card' | 'pose' | 'mine' | 'dice' | 'themes';
   gameMode: GameMode;
   turn: number;
   players: Player[];

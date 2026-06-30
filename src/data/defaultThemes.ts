@@ -43,6 +43,57 @@ const MINE_MODE_THEMES: Theme[] = [
   }
 ];
 
+const DICE_MODE_THEMES: Theme[] = [
+  {
+    id: 'dice_action_default',
+    name: '上骰子动作',
+    desc: '亲密骰子模式专用动作词库',
+    audience: 'common',
+    modes: ['diceAction'],
+    tasks: [
+      { text: '按摩', executor: 'both', moveDelta: 0 },
+      { text: '轻抚', executor: 'both', moveDelta: 0 },
+      { text: '亲吻', executor: 'both', moveDelta: 0 },
+      { text: '轻挠', executor: 'both', moveDelta: 0 },
+      { text: '舔', executor: 'both', moveDelta: 0 },
+      { text: '轻咬', executor: 'both', moveDelta: 0 },
+      { text: '吸允', executor: 'both', moveDelta: 0 },
+      { text: '吹', executor: 'both', moveDelta: 0 }
+    ]
+  },
+  {
+    id: 'dice_body_default',
+    name: '亲密版下部位',
+    desc: '亲密骰子模式专用部位词库',
+    audience: 'common',
+    modes: ['diceBody'],
+    tasks: [
+      { text: '耳朵', executor: 'both', moveDelta: 0 },
+      { text: '肚脐', executor: 'both', moveDelta: 0 },
+      { text: '嘴唇', executor: 'both', moveDelta: 0 },
+      { text: '脚', executor: 'both', moveDelta: 0 },
+      { text: '鼻子', executor: 'both', moveDelta: 0 },
+      { text: '手指', executor: 'both', moveDelta: 0 },
+      { text: '手', executor: 'both', moveDelta: 0 },
+      { text: '后背', executor: 'both', moveDelta: 0 }
+    ]
+  },
+  {
+    id: 'dice_body_spicy',
+    name: '羞羞版下部位',
+    desc: '亲密骰子模式羞羞专用部位词库',
+    audience: 'common',
+    modes: ['diceBody'],
+    tasks: [
+      { text: '阴茎/阴道', executor: 'both', moveDelta: 0 },
+      { text: '脖子', executor: 'both', moveDelta: 0 },
+      { text: '乳房', executor: 'both', moveDelta: 0 },
+      { text: '嘴唇', executor: 'both', moveDelta: 0 },
+      { text: '屁股', executor: 'both', moveDelta: 0 }
+    ]
+  }
+];
+
 const DEFAULT_THEME_SEEDS: Array<Omit<Theme, 'modes'> & { modes?: ThemeMode[] }> = [
   {
     "id": "sweet",
@@ -7097,6 +7148,7 @@ const DEFAULT_THEME_SEEDS: Array<Omit<Theme, 'modes'> & { modes?: ThemeMode[] }>
 
 export const DEFAULT_THEMES: Theme[] = [
   ...MINE_MODE_THEMES,
+  ...DICE_MODE_THEMES,
   ...DEFAULT_THEME_SEEDS.map(theme => ({
     ...theme,
     modes: theme.modes || DEFAULT_THEME_MODES
