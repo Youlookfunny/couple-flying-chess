@@ -2,8 +2,8 @@
 
 这是一个专为情侣设计的互动飞行棋 Web 应用。不仅保留了经典飞行棋的乐趣，还加入了自定义任务卡、主题管理以及 AI 辅助导入等现代化功能，增进情侣间的互动与趣味。
 
-在线预览：[https://youlookfunny.github.io](https://cpfly.top/)
-
+在线预览：[https://youlookfunny.github.io](https://youlookfunny.github.io)
+原项目地址（本人添加玩法）：[https://github.com/woniu9524/couple-flying-chess](https://github.com/woniu9524/couple-flying-chess)
 ## ✨ 功能特性
 
 - **自定义主题**: 用户可以创建属于自己的游戏主题，设置特定的惩罚或奖励任务。

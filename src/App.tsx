@@ -168,7 +168,7 @@ function App() {
           </div>
           <div className="flex flex-col items-end gap-2 mt-1">
             <a
-              href="https://github.com/woniu9524/couple-flying-chess"
+              href="https://github.com/Youlookfunny/couple-flying-chess"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
